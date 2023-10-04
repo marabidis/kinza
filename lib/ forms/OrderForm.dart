@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_kinza/styles/app_constants.dart';
 
 enum DeliveryMethod { pickup, courier }
 
@@ -16,8 +17,15 @@ String deliveryMethodToString(DeliveryMethod method) {
 
 class OrderForm extends StatefulWidget {
   final Function(DeliveryMethod, String?, String?, String?, String?) onSubmit;
+  final ValueNotifier<DeliveryMethod> deliveryMethodNotifier;
+  final Function(DeliveryMethod value) updateDelivery;
 
-  OrderForm({Key? key, required this.onSubmit}) : super(key: key);
+  OrderForm({
+    Key? key,
+    required this.onSubmit,
+    required this.updateDelivery,
+    required this.deliveryMethodNotifier,
+  }) : super(key: key);
 
   @override
   OrderFormState createState() => OrderFormState();
@@ -28,18 +36,30 @@ class OrderFormState extends State<OrderForm> {
   final phoneNumberController = TextEditingController();
   final addressController = TextEditingController();
   final commentController = TextEditingController();
+  DeliveryMethod _method;
+  final _formKey = GlobalKey<FormState>();
+
+  OrderFormState() : _method = DeliveryMethod.courier;
+
+  @override
+  void initState() {
+    super.initState();
+    _method = widget.deliveryMethodNotifier.value;
+    widget.deliveryMethodNotifier.addListener(_onDeliveryMethodChanged);
+    phoneNumberController.addListener(_phoneListener);
+  }
+
+  void _onDeliveryMethodChanged() {
+    setState(() {
+      _method = widget.deliveryMethodNotifier.value;
+    });
+  }
 
   bool isNumeric(String s) {
     if (s == null) {
       return false;
     }
     return double.tryParse(s) != null;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    phoneNumberController.addListener(_phoneListener);
   }
 
   void _phoneListener() {
@@ -56,10 +76,9 @@ class OrderFormState extends State<OrderForm> {
       phoneNumberController.selection = TextSelection.fromPosition(
           TextPosition(offset: phoneNumberController.text.length));
     }
-  }
 
-  DeliveryMethod _method = DeliveryMethod.courier;
-  final _formKey = GlobalKey<FormState>();
+    _formKey.currentState?.validate(); // Добавленная строка
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,29 +91,31 @@ class OrderFormState extends State<OrderForm> {
             value: DeliveryMethod.pickup,
             groupValue: _method,
             onChanged: (DeliveryMethod? value) {
-              setState(() {
-                _method = value!;
-              });
+              HapticFeedback.lightImpact();
+              widget.deliveryMethodNotifier.value = value!;
+              widget.updateDelivery(value);
             },
+            activeColor: AppColors.black, // Цвет активного радиокнопки
           ),
           RadioListTile<DeliveryMethod>(
             title: const Text('Доставка курьером'),
             value: DeliveryMethod.courier,
             groupValue: _method,
             onChanged: (DeliveryMethod? value) {
-              setState(() {
-                _method = value!;
-              });
+              HapticFeedback.lightImpact();
+              widget.deliveryMethodNotifier.value = value!;
+              widget.updateDelivery(value);
             },
+            activeColor: AppColors.black, // Цвет активного радиокнопки
           ),
-          TextFormField(
+          _buildTextField(
             controller: nameController,
-            decoration: InputDecoration(labelText: "Имя"),
+            labelText: "Имя",
             validator: (value) => value!.isEmpty ? "Введите имя" : null,
           ),
-          TextFormField(
+          _buildTextField(
             controller: phoneNumberController,
-            decoration: InputDecoration(labelText: "Номер телефона"),
+            labelText: "Номер телефона",
             keyboardType: TextInputType.number,
             validator: (value) {
               if (value!.isEmpty) return "Введите номер";
@@ -108,16 +129,66 @@ class OrderFormState extends State<OrderForm> {
             ],
           ),
           if (_method == DeliveryMethod.courier)
-            TextFormField(
+            _buildTextField(
               controller: addressController,
-              decoration: InputDecoration(labelText: "Адрес доставки"),
+              labelText: "Адрес доставки",
               validator: (value) => value!.isEmpty ? "Введите адрес" : null,
             ),
-          TextFormField(
+          _buildTextField(
             controller: commentController,
-            decoration: InputDecoration(labelText: "Комментарий к заказу"),
+            labelText: "Комментарий к заказу",
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 5.0),
+      child: TextFormField(
+        controller: controller,
+        onChanged: (value) {
+          HapticFeedback.selectionClick();
+          _formKey.currentState?.validate();
+        },
+        decoration: InputDecoration(
+          labelText: labelText,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          border: UnderlineInputBorder(
+            borderSide: BorderSide(
+              width: 1.0,
+              color: Colors.grey,
+            ),
+          ),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(
+              width: 1.0,
+              color: Colors.grey,
+            ),
+          ),
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(
+              width: 1.0,
+              color: AppColors.black,
+            ),
+          ),
+          disabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(
+              width: 1.0,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        keyboardType: keyboardType,
+        validator: validator,
+        inputFormatters: inputFormatters,
       ),
     );
   }
@@ -153,6 +224,7 @@ class OrderFormState extends State<OrderForm> {
 
   @override
   void dispose() {
+    widget.deliveryMethodNotifier.removeListener(_onDeliveryMethodChanged);
     nameController.dispose();
     phoneNumberController.removeListener(_phoneListener);
     phoneNumberController.dispose();

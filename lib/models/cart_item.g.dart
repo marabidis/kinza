@@ -17,18 +17,12 @@ class CartItemAdapter extends TypeAdapter<CartItem> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return CartItem(
-      // id: fields[0] as String,
-      // title: fields[1] as String,
-      // price: fields[2] as int,
-      // quantity: fields[3] as int,
-      // imageUrl: fields[4] as String?,
-      // weight: fields[5] as int,
       id: fields[0] as String,
       title: fields[1] as String,
       price: fields[2] as int,
+      weight: fields[5] as String?,
       quantity: fields[3] as int,
       imageUrl: fields[4] as String?,
-      weight: fields[5] as String?,
     );
   }
 

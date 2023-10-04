@@ -1,39 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Это необходимо для установки ориентации
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'cart_item.dart';
-import 'ui/splash_screen.dart';
+import 'models/cart_item.dart';
+import 'ui/screens/splash_screen.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'config.dart';
 
-Future<void> main() async {
-  // Задаем вертикальную ориентацию для приложения
+void main() async {
+  // Обеспечиваем инициализацию
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Загрузка конфигурационных данных
+  await dotenv.load(fileName: ".env");
+  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? Config.supabaseUrl;
+  final supabaseAnonKey =
+      dotenv.env['SUPABASE_ANON_KEY'] ?? Config.supabaseAnonKey;
 
   // Инициализация timezone
   tz.initializeTimeZones();
   // tz.setLocalLocation(tz.getLocation('Europe/Saratov'));
 
   // DateTime.now()
-
   initializeDateFormatting('ru_RU');
 
+  // Установка предпочитаемой ориентации
   SystemChrome.setPreferredOrientations(
           [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown])
       .then((_) async {
     await Supabase.initialize(
-      url: 'https://yxsrcgwplogjoecppegy.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4c3JjZ3dwbG9nam9lY3BwZWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTMzMTIzNjIsImV4cCI6MjAwODg4ODM2Mn0.B3QQwk4SmbkIWmVicbkX70BvxxTry9MQRd3EwjYl9AU',
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
     );
 
     // Регистрация адаптера перед инициализацией Hive
-    Hive.registerAdapter(CartItemAdapter());
-
     await Hive.initFlutter();
+    Hive.registerAdapter(CartItemAdapter());
 
     runApp(MyApp());
   });

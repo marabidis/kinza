@@ -5,7 +5,7 @@
 !.env.stage
 !.env.production
 !.env.development
-./lib/config.dart
+lib/config.dart
 
 ### ------------------------- Flutter.gitignore ------------------------ ###
 

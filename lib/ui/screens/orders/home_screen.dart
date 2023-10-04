@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '/ui/horizontal_menu.dart';
+import '../../widgets/horizontal_menu.dart';
 import '/models/CatalogFood.dart';
-import 'foodCatalog.dart';
+import '../../foodCatalog.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '/cart_item.dart';
 import 'dart:developer';
-import 'cart_screen.dart';
-import 'floating_cart_button.dart';
-import './product_detail_widget.dart';
+import '../cart/cart_screen.dart';
+import '../../widgets/cart/floating_cart_button.dart';
+import 'product/product_detail_widget.dart';
 
 const _ITEM_HEIGHT = 150.0;
 
@@ -41,7 +41,11 @@ class _HomeScreenState extends State<HomeScreen> {
           onAddToCart: () {
             _toggleItemInCart(context, item);
           },
-          isInCart: isItemInCart(item), // передайте этот параметр
+          isInCart: isItemInCart(item),
+          onCartStateChanged: () {
+            setState(
+                () {}); // Просто вызываем setState для перестройки виджетов
+          },
         );
       },
     );
@@ -83,6 +87,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (cartBox == null) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Ошибка корзины.')));
+
+      // Обновите состояние, чтобы вызвать перестроение виджета
+      setState(() {});
       return;
     }
 
@@ -103,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         await cartBox!.put(item['id'].toString(), cartItem);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            duration: Duration(microseconds: 200),
+            duration: Duration(microseconds: 1000),
             content: Text('${item['name_item']} был добавлен в корзину!')));
       }
     } catch (e) {
@@ -162,27 +169,38 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
       ),
-      body: ListView.builder(
-        controller: _controller,
-        itemCount: _data.length,
-        itemBuilder: (context, index) {
-          var item = _data[index];
-          return GestureDetector(
-            onTap: () => _showProductDetail(context, item),
-            child: CatalogItemWidget(
-              blurHash: "blurhash_string_for_this_image",
-              price: item['price'],
-              description: item['description_item'],
-              title: item['name_item'],
-              imageUrl: item['imageUrl'],
-              category: item['category'],
-              mark: item['mark'],
-              weight: item['weight'],
-              onAddToCart: () => _toggleItemInCart(context, item),
-            ),
-          );
-        },
-      ),
+      body: cartBox != null
+          ? ValueListenableBuilder(
+              valueListenable: cartBox!.listenable(),
+              builder: (context, Box<CartItem> box, _) {
+                return ListView.builder(
+                  controller: _controller,
+                  itemCount: _data.length,
+                  itemBuilder: (context, index) {
+                    var item = _data[index];
+                    return GestureDetector(
+                      onTap: () => _showProductDetail(context, item),
+                      child: CatalogItemWidget(
+                        isChecked:
+                            isItemInCart(item), // передаем состояние элемента
+                        blurHash: "blurhash_string_for_this_image",
+                        price: item['price'],
+                        description: item['description_item'],
+                        title: item['name_item'],
+                        imageUrl: item['imageUrl'],
+                        category: item['category'],
+                        mark: item['mark'],
+                        weight: item['weight'],
+                        onAddToCart: () => _toggleItemInCart(context, item),
+                      ),
+                    );
+                  },
+                );
+              },
+            )
+          : Center(
+              child:
+                  CircularProgressIndicator()), // отображаем индикатор загрузки, если корзина еще не загружена
       floatingActionButton: cartBox != null
           ? ValueListenableBuilder(
               valueListenable: cartBox!.listenable(),

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_kinza/my_button.dart';
+import 'package:flutter_kinza/ui/widgets/my_button.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_kinza/styles/app_constants.dart';
 
 class CatalogItemWidget extends StatelessWidget {
   final bool isChecked;
@@ -73,26 +74,9 @@ class CatalogItemWidget extends StatelessWidget {
             children: [
               Container(
                 margin: EdgeInsets.only(top: 18, bottom: 8),
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: "Roboto",
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xff101928),
-                    // height: 19 / 16,
-                  ),
-                ),
+                child: Text(title, style: AppStyles.catalogItemTitleStyle),
               ),
-              Text(
-                description,
-                style: TextStyle(
-                  fontFamily: "Roboto",
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xff67768c),
-                ),
-              ),
+              Text(description, style: AppStyles.catalogItemDescriptionStyle),
               Row(
                 children: [
                   MyButton(
@@ -115,18 +99,14 @@ class CatalogItemWidget extends StatelessWidget {
 
     switch (mark) {
       case 'острая':
-        backgroundColor = Color.fromRGBO(255, 71, 71, 1);
-        // children.add(Icon(Icons.fireplace,
-        // color: Colors
-        //    .white)); // Используйте белый цвет для лучшего контраста с фоном
-        children.add(Text('острая', style: TextStyle(color: Colors.white)));
+        backgroundColor = AppColors.red;
+        children.add(Text('острая', style: TextStyle(color: AppColors.white)));
         break;
 
       case 'дети обожают':
-        backgroundColor = Color.fromRGBO(255, 71, 193, 1);
-        // children.add(Icon(Icons.child_care, color: Colors.white));
-        children
-            .add(Text('дети обожают', style: TextStyle(color: Colors.white)));
+        backgroundColor = AppColors.pink;
+        children.add(
+            Text('дети обожают', style: TextStyle(color: AppColors.white)));
         break;
 
       default:

@@ -1,17 +1,19 @@
 import 'dart:developer';
 
+import '../../../styles/app_constants.dart';
+
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import '/cart_item.dart';
-import './cart_item_control.dart';
-import './success_order_page.dart';
+import '../../../models/cart_item.dart';
+import '../../widgets/cart/cart_item_control.dart';
+import '../orders/success_order_page.dart';
 import 'package:http/http.dart' as http;
-import './order_service.dart';
-import 'widgets/OrderForm.dart';
-
+import '../../../services/order_service.dart';
+import '../../../ forms/OrderForm.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter/services.dart';
 
 String getCurrentTime() {
   final tz.TZDateTime now = tz.TZDateTime.now(tz.getLocation('Europe/Samara'));
@@ -22,11 +24,12 @@ String getCurrentTime() {
   // Если требуется дата и время
   // final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss', 'ru_RU');
 
-  log("TIME: ${now.subtract(const Duration(hours: 1)).subtract(const Duration(minutes: 6))}");
-  return formatter.format(now
-      .subtract(const Duration(hours: 1))
-      .subtract(const Duration(minutes: 6)));
+  log("TIME: ${now.subtract(const Duration(hours: 1))}");
+  return formatter.format(now.subtract(const Duration(hours: 1)));
 }
+
+ValueNotifier<DeliveryMethod> _deliveryMethodNotifier =
+    ValueNotifier<DeliveryMethod>(DeliveryMethod.courier);
 
 class CartScreen extends StatefulWidget {
   @override
@@ -40,6 +43,42 @@ class _CartScreenState extends State<CartScreen> {
   final GlobalKey<AnimatedListState> listViewKey =
       GlobalKey<AnimatedListState>();
 
+  final deliveryMethodNotifier =
+      ValueNotifier<DeliveryMethod>(DeliveryMethod.courier);
+
+  DeliveryMethod _currentDeliveryMethod() {
+    log("[DEBUG]: deliveryMethodNotifier: ${deliveryMethodNotifier.value}");
+    return deliveryMethodNotifier.value;
+  }
+
+  void _deleteItemFromCart(int index) {
+    // Проверяем, что индекс находится в допустимом диапазоне
+    if (index >= 0 && index < cartBox.length) {
+      cartBox.deleteAt(index);
+
+      setState(() {
+        // Этот вызов обновит UI
+      });
+
+      if (listViewKey.currentState != null) {
+        listViewKey.currentState!.removeItem(
+          index,
+          (context, animation) {
+            return SizedBox.shrink();
+          },
+        );
+      } else {
+        print('Ошибка: currentState is null');
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    deliveryMethodNotifier.dispose(); // не забудьте его освободить
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -52,12 +91,15 @@ class _CartScreenState extends State<CartScreen> {
       appBar: AppBar(
         title: Text(
           "Ваш заказ",
-          style: TextStyle(
-            fontFamily: 'Roboto',
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
+          style: AppStyles.titleTextStyle.copyWith(
+            color: AppColors.black, // Изменение цвета текста на черный
           ),
         ),
+        backgroundColor: Colors.white, // Изменение фона AppBar на белый
+        iconTheme: IconThemeData(
+          color: AppColors.black, // Изменение цвета иконок на черный
+        ),
+        elevation: 0.0, // Удаление тени
       ),
       bottomNavigationBar: cartBox.isEmpty
           ? const SizedBox()
@@ -66,22 +108,33 @@ class _CartScreenState extends State<CartScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Итого: ${_getTotalSum()} ₽',
-                    style: TextStyle(
-                      fontFamily: 'Roboto',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: // Вставьте ValueListenableBuilder перед OrderForm
+                      ValueListenableBuilder<DeliveryMethod>(
+                    valueListenable: _deliveryMethodNotifier,
+                    builder: (context, deliveryMethod, child) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 10.0),
+                        child: Text(
+                          _getDeliveryMessage(_getTotalSum(), deliveryMethod),
+                          textAlign: TextAlign.center,
+                          style: AppStyles.subtitleTextStyle,
+                        ),
+                      );
+                    },
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.only(
+                      left: 16.0, right: 16.0, bottom: 50.0), // Изменено здесь
                   child: Container(
                     width: 358,
                     height: 51,
                     child: ElevatedButton(
-                      onPressed: _isProcessing
+                      onPressed: _isProcessing ||
+                              (_getTotalSum() < 600 &&
+                                  _currentDeliveryMethod() !=
+                                      DeliveryMethod.pickup)
                           ? null
                           : () async {
                               if (_orderFormKey.currentState!.validate()) {
@@ -113,7 +166,10 @@ class _CartScreenState extends State<CartScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) => SuccessOrderPage()),
+                                    builder: (context) => SuccessOrderPage(
+                                        orderNumber:
+                                            orderNum), // Используйте orderNum здесь
+                                  ),
                                 );
 
                                 setState(() {
@@ -122,34 +178,31 @@ class _CartScreenState extends State<CartScreen> {
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                      content: Text(
-                                          'Пожалуйста, заполните все обязательные поля формы!')),
+                                    content: Text(
+                                      'Пожалуйста, заполните все обязательные поля формы!',
+                                    ),
+                                  ),
                                 );
+                                HapticFeedback.heavyImpact();
                               }
                             },
-                      style: ElevatedButton.styleFrom(
-                        primary: Color.fromRGBO(149, 202, 32, 1),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        elevation: 0,
-                      ),
+                      style: AppStyles.elevatedButtonStyle,
                       child: _isProcessing
                           ? CircularProgressIndicator(
                               valueColor:
                                   AlwaysStoppedAnimation<Color>(Colors.white),
-                            ) // индикатор загрузки внутри кнопки
-                          : Text(
-                              'Оформить заказ на ${_getTotalSum()} ₽',
-                              style: TextStyle(
-                                fontFamily: 'Roboto',
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Color.fromRGBO(255, 255, 255, 1),
-                              ),
-                            ),
+                            )
+                          : (_getTotalSum() < 600 &&
+                                  _currentDeliveryMethod() !=
+                                      DeliveryMethod.pickup
+                              ? Text(
+                                  'Добавьте товары на ${600 - _getTotalSum()} ₽',
+                                  style: AppStyles.buttonTextStyle,
+                                )
+                              : Text(
+                                  'Оформить заказ на ${_getTotalSum()} ₽',
+                                  style: AppStyles.buttonTextStyle,
+                                )),
                     ),
                   ),
                 ),
@@ -159,10 +212,47 @@ class _CartScreenState extends State<CartScreen> {
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Image.asset('assets/pizza_box.png'),
+                  Image.asset('assets/pizza_box.png', height: 150),
                   SizedBox(height: 20),
-                  Text("Корзина пустая"),
+                  Text(
+                    "Пока, тут пусто!",
+                    style: AppStyles.subtitleTextStyle,
+                  ),
+                  SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      "Ваша корзина пуста, перейдите по кнопке в меню и выберите понравившийся товар.",
+                      style: AppStyles.bodyTextStyle,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.padding,
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          Navigator.popUntil(
+                              context,
+                              (route) => route
+                                  .isFirst); // Этот метод приведет вас к первой странице в стеке маршрутов (обычно главной).
+                        },
+                        child: Text(
+                          "Перейти в меню",
+                          style: AppStyles.buttonTextStyle,
+                        ),
+                        style: AppStyles.elevatedButtonStyle,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             )
@@ -227,7 +317,9 @@ class _CartScreenState extends State<CartScreen> {
                             trailing: Container(
                               child: IconButton(
                                 padding: EdgeInsets.zero,
-                                icon: Icon(Icons.delete, color: Colors.red),
+                                icon: Icon(Icons.delete,
+                                    color: const Color.fromARGB(
+                                        255, 116, 116, 116)),
                                 onPressed: () {
                                   _deleteItemFromCart(index);
                                 },
@@ -263,6 +355,12 @@ class _CartScreenState extends State<CartScreen> {
                     },
                   ),
                   OrderForm(
+                    deliveryMethodNotifier: _deliveryMethodNotifier,
+                    updateDelivery: (v) {
+                      setState(() {
+                        deliveryMethodNotifier.value = v;
+                      });
+                    },
                     key: _orderFormKey,
                     onSubmit: (method, name, phoneNumber, address, comment) {
                       // Вычисляем общую сумму заказа
@@ -276,14 +374,25 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   int _getTotalSum() {
-    int sum = 0;
+    int totalSum = 0;
     for (int i = 0; i < cartBox.length; i++) {
-      final item = cartBox.getAt(i);
+      CartItem? item = cartBox.getAt(i);
       if (item != null) {
-        sum += item.quantity * item.price;
+        totalSum += (item.price * item.quantity);
       }
     }
-    return sum;
+    log("[DEBUG]: totalSum: $totalSum");
+    return totalSum;
+  }
+
+  String _getDeliveryMessage(int totalSum, DeliveryMethod deliveryMethod) {
+    if (deliveryMethod == DeliveryMethod.pickup) {
+      return "Будем ждать Вас!";
+    } else if (totalSum >= 800) {
+      return "Доставка будет бесплатной";
+    } else {
+      return "Доставка по городу 100 руб";
+    }
   }
 
   Future<int> incrementOrderNumber() async {
@@ -351,27 +460,5 @@ class _CartScreenState extends State<CartScreen> {
         'parse_mode': 'Markdown',
       },
     );
-  }
-
-  void _deleteItemFromCart(int index) {
-    // Проверяем, что индекс находится в допустимом диапазоне
-    if (index >= 0 && index < cartBox.length) {
-      cartBox.deleteAt(index);
-
-      setState(() {
-        // Этот вызов обновит UI
-      });
-
-      if (listViewKey.currentState != null) {
-        listViewKey.currentState!.removeItem(
-          index,
-          (context, animation) {
-            return SizedBox.shrink();
-          },
-        );
-      } else {
-        print('Ошибка: currentState is null');
-      }
-    }
   }
 }

@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_kinza/my_button.dart';
+import 'package:flutter_kinza/ui/widgets/my_button.dart';
 
 class ProductDetailWidget extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onAddToCart;
+  final VoidCallback onCartStateChanged; // Добавленный обратный вызов
   final bool isInCart;
 
   ProductDetailWidget({
     required this.item,
     required this.onAddToCart,
     required this.isInCart,
+    required this.onCartStateChanged, // Добавьте этот параметр
   });
 
   @override
@@ -53,10 +55,16 @@ class ProductDetailWidget extends StatelessWidget {
             ),
             SizedBox(height: 16.0),
 
-            // Кнопка добавления в корзину
+            // Кнопка добавления в корзину или удаления из неё
             MyButton(
-              buttonText: "В корзину",
-              onPressed: onAddToCart,
+              buttonText: isInCart ? "Удалить из корзины" : "В корзину",
+              onPressed: () {
+                print('Button pressed');
+                onAddToCart();
+                print('onAddToCart called');
+                onCartStateChanged(); // Уведомляем родительский виджет об изменении состояния корзины
+                print('onCartStateChanged called');
+              },
               isChecked: isInCart,
             ),
           ],

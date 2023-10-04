@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_kinza/styles/app_constants.dart';
 
 class HorizontalMenu extends AppBar {
   final Function(String) onCategoryChanged;
@@ -33,6 +35,7 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
               title: 'Пиццы',
               isActive: activeCategory == 'Пиццы',
               onTap: () {
+                HapticFeedback.mediumImpact();
                 setActiveCategory('Пиццы');
                 widget.onCategoryChanged('Пиццы');
               },
@@ -41,6 +44,7 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
               title: 'Блюда на мангале',
               isActive: activeCategory == 'Блюда на мангале',
               onTap: () {
+                HapticFeedback.mediumImpact();
                 setActiveCategory('Блюда на мангале');
                 widget.onCategoryChanged('Блюда на мангале');
               },
@@ -49,6 +53,7 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
               title: 'Хачапури',
               isActive: activeCategory == 'Хачапури',
               onTap: () {
+                HapticFeedback.mediumImpact();
                 setActiveCategory('Хачапури');
                 widget.onCategoryChanged('Хачапури');
               },
@@ -57,6 +62,7 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
               title: 'К блюду',
               isActive: activeCategory == 'К блюду',
               onTap: () {
+                HapticFeedback.mediumImpact();
                 setActiveCategory('К блюду');
                 widget.onCategoryChanged('К блюду');
               },
@@ -83,7 +89,7 @@ class MenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color backgroundColor = isActive
-        ? Color.fromRGBO(255, 105, 0, 1) // Фон активной кнопки
+        ? AppColors.orange // Фон активной кнопки
         : Color.fromRGBO(195, 195, 195, 1); // Фон неактивных кнопок
 
     return Padding(
@@ -107,7 +113,7 @@ class MenuButton extends StatelessWidget {
           child: Text(
             title,
             style: TextStyle(
-                fontSize: 16, color: Colors.white), // Стиль текста на кнопке
+                fontSize: 16, color: AppColors.white), // Стиль текста на кнопке
           ),
         ),
       ),

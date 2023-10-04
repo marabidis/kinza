@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 //import 'package:hive/hive.dart';
-import '/cart_item.dart';
+import '../../../models/cart_item.dart';
 
 class CartItemControl extends StatefulWidget {
   final CartItem item;

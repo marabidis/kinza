@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_kinza/styles/app_constants.dart';
 
 class MyButton extends StatefulWidget {
   final bool isChecked;
@@ -36,25 +38,32 @@ class _MyButtonState extends State<MyButton> {
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: () {
+        HapticFeedback.mediumImpact();
         setState(() {
           _isClicked = !_isClicked;
         });
         widget.onPressed();
       },
       style: ButtonStyle(
-        backgroundColor: MaterialStateProperty.all(
-          _isClicked ? Color(0x94CA2033) : Color(0xFF95CA20),
+        backgroundColor: MaterialStateProperty.resolveWith<Color>(
+          (Set<MaterialState> states) {
+            return _isClicked
+                ? Color(0x94CA2033)
+                : AppColors.green; // используйте AppColors.green
+          },
         ),
         elevation: MaterialStateProperty.all(0.0),
-        padding: MaterialStateProperty.all(
-            EdgeInsets.symmetric(horizontal: 18, vertical: 8)),
-        textStyle: MaterialStateProperty.all(TextStyle(fontSize: 14)),
+        padding: MaterialStateProperty.all(EdgeInsets.symmetric(
+            horizontal: AppConstants.padding,
+            vertical: AppConstants.paddingSmall)),
         shape: MaterialStateProperty.all(RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(50),
+          borderRadius: BorderRadius.circular(AppConstants
+              .baseRadius), // используйте AppConstants для радиуса скругления
         )),
       ),
       child: Text(
         _isClicked ? 'В корзине' : widget.buttonText,
+        style: AppStyles.buttonTextStyle, // Установите стиль текста здесь
       ),
     );
   }
