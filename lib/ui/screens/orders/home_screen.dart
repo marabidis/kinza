@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../widgets/horizontal_menu.dart';
 import '/models/CatalogFood.dart';
-import '../../foodCatalog.dart';
+import '../../widgets/foodCatalog.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '/cart_item.dart';
+import '../../../models/cart_item.dart';
 import 'dart:developer';
 import '../cart/cart_screen.dart';
 import '../../widgets/cart/floating_cart_button.dart';
