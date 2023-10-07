@@ -14,6 +14,7 @@ import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/services.dart';
+import '/config.dart';
 
 String getCurrentTime() {
   final tz.TZDateTime now = tz.TZDateTime.now(tz.getLocation('Europe/Samara'));
@@ -214,7 +215,7 @@ class _CartScreenState extends State<CartScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Image.asset('assets/pizza_box.png', height: 150),
+                  Image.asset('assets/cat.png', height: 150),
                   SizedBox(height: 20),
                   Text(
                     "Пока, тут пусто!",
@@ -332,23 +333,62 @@ class _CartScreenState extends State<CartScreen> {
                               bottom: 8,
                             ),
                             child: CartItemControl(
-                                item: item,
-                                onQuantityChanged: (newQuantity) {
-                                  if (newQuantity <= 0) {
-                                    _deleteItemFromCart(index);
-                                  } else {
-                                    CartItem updatedItem = CartItem(
-                                      id: item.id,
-                                      title: item.title,
-                                      price: item.price,
-                                      weight: item.weight,
-                                      imageUrl: item.imageUrl,
-                                      quantity: newQuantity,
-                                    );
-                                    cartBox.putAt(index, updatedItem);
-                                    setState(() {});
-                                  }
-                                }),
+                              item: item,
+                              onQuantityChanged: (newQuantity) {
+                                if (newQuantity <= 0) {
+                                  _deleteItemFromCart(index);
+                                } else {
+                                  CartItem updatedItem = CartItem(
+                                    id: item.id,
+                                    title: item.title,
+                                    price: item.price,
+                                    weight: item.weight,
+                                    imageUrl: item.imageUrl,
+                                    quantity: newQuantity,
+                                    isWeightBased:
+                                        item.isWeightBased, // добавьте это поле
+                                    minimumWeight:
+                                        item.minimumWeight, // добавьте это поле
+                                    unit: item.unit, // добавьте это поле
+                                  );
+
+                                  cartBox.putAt(index, updatedItem);
+                                  setState(() {});
+                                }
+                              },
+                              onWeightChanged: (newWeight) {
+                                // Обновляем вес товара
+                                CartItem updatedItem = CartItem(
+                                  id: item.id,
+                                  title: item.title,
+                                  price: item.price,
+                                  weight: newWeight,
+                                  imageUrl: item.imageUrl,
+                                  quantity: item.quantity,
+                                  isWeightBased:
+                                      item.isWeightBased, // добавьте это поле
+                                  minimumWeight:
+                                      item.minimumWeight, // добавьте это поле
+                                  unit: item.unit, // добавьте это поле
+                                );
+
+                                cartBox.putAt(index, updatedItem);
+                                setState(() {});
+                              },
+                              isWeightBased: item
+                                  .isWeightBased, // Предполагая, что у вас есть такой флаг в модели CartItem
+                              minWeight:
+                                  0.1, // Минимальный вес товара (можно адаптировать под свои нужды)
+                              maxWeight:
+                                  999, // Максимальный вес товара (можно адаптировать под свои нужды)
+                              maxQuantity:
+                                  999, // Максимальное количество товара (можно адаптировать под свои нужды)
+                              onAddToCart: () {
+                                // ваш код для добавления товара в корзину
+                              },
+                              isItemInCart:
+                                  true, // или false, в зависимости от того, находится ли товар в корзине
+                            ),
                           ),
                         ],
                       );
@@ -378,7 +418,12 @@ class _CartScreenState extends State<CartScreen> {
     for (int i = 0; i < cartBox.length; i++) {
       CartItem? item = cartBox.getAt(i);
       if (item != null) {
-        totalSum += (item.price * item.quantity);
+        if (item.isWeightBased) {
+          totalSum += (item.price * (item.weight ?? 0) * 10)
+              .toInt(); // умножаем на 10, если цена указана за 0.1 кг
+        } else {
+          totalSum += (item.price * item.quantity);
+        }
       }
     }
     log("[DEBUG]: totalSum: $totalSum");
@@ -427,8 +472,13 @@ class _CartScreenState extends State<CartScreen> {
     for (int i = 0; i < cartBox.length; i++) {
       final item = cartBox.getAt(i);
       if (item != null) {
-        details.writeln(
-            "- ${item.title} (кол-во: ${item.quantity}, Цена за шт: ${item.price} ₽)");
+        if (item.isWeightBased) {
+          details.writeln(
+              "- ${item.title} (вес: ${item.weight?.toStringAsFixed(1)} кг, Цена за 0.1 кг: ${item.price} ₽)");
+        } else {
+          details.writeln(
+              "- ${item.title} (кол-во: ${item.quantity}, Цена за шт: ${item.price} ₽)");
+        }
       }
     }
     details.writeln("Общий итог: ${_getTotalSum()} ₽");
@@ -446,16 +496,14 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> sendOrderToTelegram(String orderDetails) async {
-    const String token =
-        '5016384464:AAHc2iyx2AJLTZngbE8yJtuXxuFjcxSeuJM'; // Ваш токен бота
-    const String chatId = '58764404'; // Ваш идентификатор чата
-
-    final String url = 'https://api.telegram.org/bot$token/sendMessage';
+    final String url =
+        'https://api.telegram.org/bot$telegramBotToken/sendMessage';
 
     await http.post(
       Uri.parse(url),
       body: {
-        'chat_id': chatId,
+        'chat_id': telegramChatId,
+        'text': orderDetails,
         'text': orderDetails,
         'parse_mode': 'Markdown',
       },

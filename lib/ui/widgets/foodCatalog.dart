@@ -14,7 +14,7 @@ class CatalogItemWidget extends StatelessWidget {
   final int price;
   final VoidCallback onAddToCart;
   final String? mark;
-  final String? weight;
+  final double? weight;
 
   CatalogItemWidget({
     this.imageUrl,

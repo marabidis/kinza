@@ -9,6 +9,9 @@ class Product {
   final String category;
   final int price;
   final String id;
+  final double? weight; // изменено на double?
+  final double? minimumWeight; // изменено на double?
+  final bool isWeightBased; // новое поле
 
   Product({
     this.imageUrl,
@@ -18,6 +21,9 @@ class Product {
     required this.category,
     required this.price,
     required this.id,
+    this.weight,
+    this.minimumWeight,
+    required this.isWeightBased, // новый параметр
   });
 
   Product copyWith({
@@ -37,6 +43,9 @@ class Product {
       category: category ?? this.category,
       price: price ?? this.price,
       id: id ?? this.id,
+      weight: weight ?? this.weight,
+      minimumWeight: minimumWeight ?? this.minimumWeight,
+      isWeightBased: isWeightBased,
     );
   }
 
@@ -49,18 +58,24 @@ class Product {
       'category': category,
       'price': price,
       'id': id,
+      'weight': weight,
+      'minimumWeight': minimumWeight,
+      'isWeightBased': isWeightBased, // новое поле
     };
   }
 
   factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
-      imageUrl: map['imageUrl'] != null ? map['imageUrl'] as String : null,
+      imageUrl: map['imageUrl'] as String?,
       blurHash: map['blurHash'] as String,
       title: map['title'] as String,
       description: map['description'] as String,
       category: map['category'] as String,
       price: map['price'] as int,
       id: map['id'] as String,
+      weight: (map['weight'] as num?)?.toDouble(),
+      minimumWeight: (map['minimumWeight'] as num?)?.toDouble(),
+      isWeightBased: map['isWeightBased'] as bool,
     );
   }
 

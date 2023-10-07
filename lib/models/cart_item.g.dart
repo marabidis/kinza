@@ -16,20 +16,26 @@ class CartItemAdapter extends TypeAdapter<CartItem> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
+    print(
+        'fields[5]: ${fields[5]}, fields[6]: ${fields[6]}'); // добавьте эту строку
     return CartItem(
       id: fields[0] as String,
       title: fields[1] as String,
       price: fields[2] as int,
-      weight: fields[5] as String?,
       quantity: fields[3] as int,
       imageUrl: fields[4] as String?,
+      weight: fields[5] != null ? double.parse(fields[5].toString()) : null,
+      minimumWeight:
+          fields[6] != null ? double.parse(fields[6].toString()) : null,
+      isWeightBased: fields[7] as bool? ?? false,
+      unit: fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CartItem obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +47,13 @@ class CartItemAdapter extends TypeAdapter<CartItem> {
       ..writeByte(4)
       ..write(obj.imageUrl)
       ..writeByte(5)
-      ..write(obj.weight);
+      ..write(obj.weight)
+      ..writeByte(6)
+      ..write(obj.minimumWeight)
+      ..writeByte(7)
+      ..write(obj.isWeightBased)
+      ..writeByte(8)
+      ..write(obj.unit);
   }
 
   @override

@@ -17,17 +17,29 @@ class CartItem {
   final int quantity;
 
   @HiveField(4)
-  final String? imageUrl; // Добавлено поле imageUrl
+  final String? imageUrl;
 
   @HiveField(5)
-  final String? weight; // Добавлено поле weight
+  final double? weight; // изменено на double
+
+  @HiveField(6)
+  final double? minimumWeight; // изменено на double
+
+  @HiveField(7)
+  final bool isWeightBased; // новое свойство
+
+  @HiveField(8)
+  final String? unit; // единица измерения (например, 'г', 'кг', 'л' и т. д.)
 
   CartItem({
     required this.id,
     required this.title,
     required this.price,
-    required this.weight,
     required this.quantity,
     this.imageUrl,
+    this.weight,
+    this.minimumWeight,
+    required this.isWeightBased, // новый параметр
+    this.unit,
   });
 }

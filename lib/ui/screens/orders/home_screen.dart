@@ -46,6 +46,20 @@ class _HomeScreenState extends State<HomeScreen> {
             setState(
                 () {}); // Просто вызываем setState для перестройки виджетов
           },
+          onQuantityChanged: (quantity) {
+            if (!isItemInCart(item)) {
+              _toggleItemInCart(context, item, quantity);
+            } // Дополнительная логика, если требуется
+          },
+          onWeightChanged: (weight) {
+            if (!isItemInCart(item)) {
+              _toggleItemInCart(context, item);
+            }
+            // Дополнительная логика, если требуется
+          },
+          onItemAdded: () {
+            // Здесь ваш код, который должен быть выполнен, когда элемент добавлен
+          },
         );
       },
     );
@@ -82,8 +96,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _toggleItemInCart(
-      BuildContext context, Map<String, dynamic> item) async {
+  void _toggleItemInCart(BuildContext context, Map<String, dynamic> item,
+      [int quantity = 1]) async {
     if (cartBox == null) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Ошибка корзины.')));
@@ -104,10 +118,20 @@ class _HomeScreenState extends State<HomeScreen> {
           id: item['id'].toString(),
           title: item['name_item'],
           price: item['price'],
-          weight: item['weight']?.toString() ?? "",
-          quantity: 1,
+          weight: item['weight'] != null
+              ? double.parse(item['weight'].toString())
+              : null,
+          quantity: quantity, // Используйте переданное количество
           imageUrl: item['imageUrl'], // Добавляем imageUrl
+          isWeightBased: item['isWeightBased'] ??
+              false, // Предполагая, что у вас есть такое свойство в вашем объекте item. Если нет, просто укажите false
+          minimumWeight: item['minimumWeight'] != null
+              ? double.parse(item['minimumWeight'].toString())
+              : null,
+          unit: item[
+              'unit'], // Предполагая, что у вас есть такое свойство в вашем объекте item. Если нет, можете убрать эту строку или указать null.
         );
+
         await cartBox!.put(item['id'].toString(), cartItem);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             duration: Duration(microseconds: 1000),
