@@ -9,26 +9,35 @@ import 'dart:developer';
 import '../cart/cart_screen.dart';
 import '../../widgets/cart/floating_cart_button.dart';
 import 'product/product_detail_widget.dart';
+import '/services/api_client.dart';
+import '/models/product.dart'; // Импортирование модели продукта
+import '/services/utils.dart'; // замените 'path_to' на путь к вашему файлу utils.dart
 
-const _ITEM_HEIGHT = 150.0;
+const _ITEM_HEIGHT = 153.0;
 
 class HomeScreen extends StatefulWidget {
+  final ApiClient apiClient;
+
+  HomeScreen({required this.apiClient});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final CatalogFood nameCategory = CatalogFood(supabase);
+  late final CatalogFoodRepository nameCategory; // Changed to late final
   String? activeCategory;
   bool _isLoading = true;
-  List<Map<String, dynamic>> _data = [];
+  List<Product> _data =
+      []; // Изменено с List<Map<String, dynamic>> на List<Product>
+
   ScrollController _controller = ScrollController();
 
-  bool isItemInCart(Map<String, dynamic> item) {
-    return cartBox != null && cartBox!.containsKey(item['id'].toString());
+  bool isItemInCart(Product product) {
+    return cartBox != null && cartBox!.containsKey(product.id.toString());
   }
 
-  void _showProductDetail(BuildContext context, Map<String, dynamic> item) {
+  void _showProductDetail(BuildContext context, Product product) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -37,23 +46,27 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       builder: (context) {
         return ProductDetailWidget(
-          item: item,
+          product:
+              product, // Теперь это правильно, если в ProductDetailWidget параметр назван product
           onAddToCart: () {
-            _toggleItemInCart(context, item);
+            _toggleItemInCart(context, product); // Изменено на product
           },
-          isInCart: isItemInCart(item),
+          isInCart: isItemInCart(product), // Изменено на product
           onCartStateChanged: () {
             setState(
                 () {}); // Просто вызываем setState для перестройки виджетов
           },
           onQuantityChanged: (quantity) {
-            if (!isItemInCart(item)) {
-              _toggleItemInCart(context, item, quantity);
+            if (!isItemInCart(product)) {
+              // Изменено на product
+              _toggleItemInCart(
+                  context, product, quantity); // Изменено на product
             } // Дополнительная логика, если требуется
           },
           onWeightChanged: (weight) {
-            if (!isItemInCart(item)) {
-              _toggleItemInCart(context, item);
+            if (!isItemInCart(product)) {
+              // Изменено на product
+              _toggleItemInCart(context, product); // Изменено на product
             }
             // Дополнительная логика, если требуется
           },
@@ -70,6 +83,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    nameCategory = CatalogFoodRepository(widget.apiClient);
+    print('HomeScreen initState called'); // Добавьте эту строку
     _loadCartData();
     _fetchData();
     _controller.addListener(_scrollListener);
@@ -79,7 +94,8 @@ class _HomeScreenState extends State<HomeScreen> {
     print('Scrolling...');
     int itemIndex = (_controller.offset / _ITEM_HEIGHT).round();
     if (itemIndex >= 0 && itemIndex < _data.length) {
-      String currentCategory = _data[itemIndex]['category'];
+      String currentCategory = _data[itemIndex]
+          .category; // Обновлено с _data[itemIndex]['category'] на _data[itemIndex].category
       if (currentCategory != activeCategory) {
         setState(() {
           activeCategory = currentCategory;
@@ -96,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _toggleItemInCart(BuildContext context, Map<String, dynamic> item,
+  void _toggleItemInCart(BuildContext context, Product product,
       [int quantity = 1]) async {
     if (cartBox == null) {
       ScaffoldMessenger.of(context)
@@ -108,34 +124,29 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      if (cartBox!.containsKey(item['id'].toString())) {
-        await cartBox!.delete(item['id'].toString());
+      if (cartBox!.containsKey(product.id.toString())) {
+        await cartBox!.delete(product.id.toString());
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            duration: Duration(microseconds: 200),
-            content: Text('${item['name_item']} был удален из корзины!')));
+            duration: Duration(microseconds: 600),
+            content: Text('${product.title} был удален из корзины!')));
       } else {
         final cartItem = CartItem(
-          id: item['id'].toString(),
-          title: item['name_item'],
-          price: item['price'],
-          weight: item['weight'] != null
-              ? double.parse(item['weight'].toString())
-              : null,
+          id: product.id.toString(),
+          title: product.title,
+          price: product.price,
+          weight: product.weight, // обновлено
           quantity: quantity, // Используйте переданное количество
-          imageUrl: item['imageUrl'], // Добавляем imageUrl
-          isWeightBased: item['isWeightBased'] ??
-              false, // Предполагая, что у вас есть такое свойство в вашем объекте item. Если нет, просто укажите false
-          minimumWeight: item['minimumWeight'] != null
-              ? double.parse(item['minimumWeight'].toString())
-              : null,
-          unit: item[
-              'unit'], // Предполагая, что у вас есть такое свойство в вашем объекте item. Если нет, можете убрать эту строку или указать null.
+          thumbnailUrl: product.imageUrl?.url, // обновлено
+          isWeightBased: product.isWeightBased ?? false, // обновлено
+          minimumWeight: product.minimumWeight, // обновлено
+          unit:
+              'unit', // Необходимо обновить на соответствующее значение из product, если оно есть
         );
 
-        await cartBox!.put(item['id'].toString(), cartItem);
+        await cartBox!.put(product.id.toString(), cartItem);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             duration: Duration(microseconds: 1000),
-            content: Text('${item['name_item']} был добавлен в корзину!')));
+            content: Text('${product.title} был добавлен в корзину!')));
       }
     } catch (e) {
       print('Ошибка при работе с коробкой Hive: $e');
@@ -149,13 +160,25 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = true;
     });
 
-    var newData = await nameCategory.fetchFoodItemsByCategory('Пицца');
+    List<Product> newData = await nameCategory
+        .fetchFoodItemsByCategory('Пицца'); // Уточнено: List<Product>
     log('Полученные данные: $newData');
 
+    // Сортировка данных
+    List<Map<String, dynamic>> dataToSort = newData.map((product) {
+      return {
+        'category': product.category,
+        'product': product,
+      };
+    }).toList();
+    List<Map<String, dynamic>> sortedData = sortCategories(dataToSort);
+
     setState(() {
-      _data.addAll(newData);
+      _data.addAll(
+          sortedData.map((item) => item['product'] as Product).toList());
       if (_data.isNotEmpty) {
-        activeCategory = _data[0]['category'];
+        activeCategory = _data[0]
+            .category; // Обновлено с _data[0]['category'] на _data[0].category
       }
       _isLoading = false;
     });
@@ -169,18 +192,17 @@ class _HomeScreenState extends State<HomeScreen> {
           int? index;
           switch (category) {
             case 'Хачапури':
-              index =
-                  _data.indexWhere((item) => item['category'] == 'Хачапури');
+              index = _data.indexWhere((item) => item.category == 'Хачапури');
               break;
             case 'Пиццы':
-              index = _data.indexWhere((item) => item['category'] == 'Пицца');
+              index = _data.indexWhere((item) => item.category == 'Пицца');
               break;
             case 'Блюда на мангале':
               index = _data
-                  .indexWhere((item) => item['category'] == 'Блюда на мангале');
+                  .indexWhere((item) => item.category == 'Блюда на мангале');
               break;
             case 'К блюду':
-              index = _data.indexWhere((item) => item['category'] == 'К блюду');
+              index = _data.indexWhere((item) => item.category == 'К блюду');
               break;
           }
 
@@ -201,30 +223,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   controller: _controller,
                   itemCount: _data.length,
                   itemBuilder: (context, index) {
-                    var item = _data[index];
+                    var product = _data[
+                        index]; // изменили имя переменной на product для ясности
                     return GestureDetector(
-                      onTap: () => _showProductDetail(context, item),
+                      onTap: () => _showProductDetail(context, product),
                       child: CatalogItemWidget(
-                        isChecked:
-                            isItemInCart(item), // передаем состояние элемента
-                        blurHash: "blurhash_string_for_this_image",
-                        price: item['price'],
-                        description: item['description_item'],
-                        title: item['name_item'],
-                        imageUrl: item['imageUrl'],
-                        category: item['category'],
-                        mark: item['mark'],
-                        weight: item['weight'],
-                        onAddToCart: () => _toggleItemInCart(context, item),
+                        product:
+                            product, // Передайте объект Product в CatalogItemWidget
+                        isChecked: isItemInCart(product),
+                        onAddToCart: () => _toggleItemInCart(context, product),
                       ),
                     );
                   },
                 );
               },
             )
-          : Center(
-              child:
-                  CircularProgressIndicator()), // отображаем индикатор загрузки, если корзина еще не загружена
+          : Center(child: CircularProgressIndicator()),
       floatingActionButton: cartBox != null
           ? ValueListenableBuilder(
               valueListenable: cartBox!.listenable(),

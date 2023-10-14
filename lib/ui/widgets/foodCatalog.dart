@@ -3,30 +3,17 @@ import 'package:flutter_kinza/ui/widgets/my_button.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_kinza/styles/app_constants.dart';
+import 'package:flutter_kinza/models/product.dart';
 
 class CatalogItemWidget extends StatelessWidget {
   final bool isChecked;
-  final String? blurHash;
-  final String? imageUrl;
-  final String title;
-  final String description;
-  final String category;
-  final int price;
+  final Product product;
   final VoidCallback onAddToCart;
-  final String? mark;
-  final double? weight;
 
   CatalogItemWidget({
-    this.imageUrl,
-    required this.blurHash,
-    required this.title,
-    required this.description,
-    required this.price,
-    required this.category,
+    required this.product,
     required this.onAddToCart,
-    required this.weight,
     this.isChecked = false,
-    this.mark,
   });
 
   @override
@@ -39,30 +26,33 @@ class CatalogItemWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(15.0),
             child: Stack(
               children: [
-                // Base image or blurhash
-                (imageUrl == null || imageUrl!.isEmpty)
+                (product.imageUrl?.thumbnailUrl == null ||
+                        product.imageUrl!.thumbnailUrl.isEmpty)
                     ? SizedBox(
                         width: 124,
                         height: 124,
                         child: BlurHash(
-                          hash: blurHash!,
+                          hash: product.blurHash,
                         ),
                       )
                     : CachedNetworkImage(
-                        imageUrl: imageUrl!,
+                        imageUrl: product.imageUrl!.thumbnailUrl,
                         placeholder: (context, url) => BlurHash(
-                            hash: 'UAHA,|~q18xbsq%2nOIA16RO8wIAxu-;%1Rj'),
-                        errorWidget: (context, url, error) => Icon(Icons.error),
+                          hash: product.blurHash,
+                        ),
+                        errorWidget: (context, url, error) {
+                          print('Failed to load image: $error');
+                          return Icon(Icons.error);
+                        },
                         fit: BoxFit.cover,
                         width: 124,
                         height: 124,
                       ),
-                // Mark overlay
-                if (mark != null)
+                if (product.mark != null)
                   Positioned(
                     top: 10,
                     left: 10,
-                    child: _buildMarkWidget(mark!),
+                    child: _buildMarkWidget(product.mark!),
                   ),
               ],
             ),
@@ -74,14 +64,16 @@ class CatalogItemWidget extends StatelessWidget {
             children: [
               Container(
                 margin: EdgeInsets.only(top: 18, bottom: 8),
-                child: Text(title, style: AppStyles.catalogItemTitleStyle),
+                child:
+                    Text(product.title, style: AppStyles.catalogItemTitleStyle),
               ),
-              Text(description, style: AppStyles.catalogItemDescriptionStyle),
+              Text(product.description,
+                  style: AppStyles.catalogItemDescriptionStyle),
               Row(
                 children: [
                   MyButton(
                     isChecked: isChecked,
-                    buttonText: '$price₽',
+                    buttonText: '${product.price}₽',
                     onPressed: onAddToCart,
                   ),
                 ],

@@ -133,10 +133,8 @@ class _CartItemControlState extends State<CartItemControl> {
       return;
     }
 
-    if (!widget.isItemInCart) {
-      widget
-          .onAddToCart(); // автоматически добавляем товар в корзину, если он еще не в корзине
-    }
+    widget
+        .onAddToCart(); // Вызываем onAddToCart() при каждом обновлении значения
 
     setState(() {
       if (widget.isWeightBased) {

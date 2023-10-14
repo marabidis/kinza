@@ -285,7 +285,8 @@ class _CartScreenState extends State<CartScreen> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(15),
                                 image: DecorationImage(
-                                  image: NetworkImage(item.imageUrl!),
+                                  image: NetworkImage(item.thumbnailUrl ??
+                                      'fallback_image_url'), // Измените эту строку
                                   fit: BoxFit.contain,
                                   onError: (exception, stackTrace) => print(
                                       'Ошибка загрузки изображения: $exception'),
@@ -343,7 +344,7 @@ class _CartScreenState extends State<CartScreen> {
                                     title: item.title,
                                     price: item.price,
                                     weight: item.weight,
-                                    imageUrl: item.imageUrl,
+                                    thumbnailUrl: item.thumbnailUrl,
                                     quantity: newQuantity,
                                     isWeightBased:
                                         item.isWeightBased, // добавьте это поле
@@ -363,7 +364,7 @@ class _CartScreenState extends State<CartScreen> {
                                   title: item.title,
                                   price: item.price,
                                   weight: newWeight,
-                                  imageUrl: item.imageUrl,
+                                  thumbnailUrl: item.thumbnailUrl,
                                   quantity: item.quantity,
                                   isWeightBased:
                                       item.isWeightBased, // добавьте это поле

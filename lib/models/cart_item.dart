@@ -17,7 +17,7 @@ class CartItem {
   final int quantity;
 
   @HiveField(4)
-  final String? imageUrl;
+  final String? thumbnailUrl; // Добавьте это поле
 
   @HiveField(5)
   final double? weight; // изменено на double
@@ -36,7 +36,7 @@ class CartItem {
     required this.title,
     required this.price,
     required this.quantity,
-    this.imageUrl,
+    required this.thumbnailUrl, // И это
     this.weight,
     this.minimumWeight,
     required this.isWeightBased, // новый параметр

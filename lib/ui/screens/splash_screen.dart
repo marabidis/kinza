@@ -3,8 +3,13 @@ import 'orders/home_screen.dart'; // импортируйте свой файл 
 import 'package:flutter_svg/flutter_svg.dart';
 //import 'package:rive/rive.dart';
 import 'package:flutter_svg/svg.dart';
+import '/services/api_client.dart';
 
 class SplashScreen extends StatefulWidget {
+  final ApiClient apiClient;
+
+  SplashScreen({required this.apiClient});
+
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }
@@ -29,8 +34,9 @@ class _SplashScreenState extends State<SplashScreen> {
       future: _loadingData,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          // Данные загружены и готовы к использованию
-          _navigateToHome();
+          WidgetsBinding.instance!.addPostFrameCallback((_) {
+            _navigateToHome();
+          });
           return Scaffold(
             body: Center(
               child: Column(
@@ -46,6 +52,9 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
           );
+        } else if (snapshot.hasError) {
+          // Добавленная проверка на ошибку
+          return Center(child: Text('Error: ${snapshot.error}'));
         } else {
           // Данные еще загружаются
           return Scaffold(
@@ -69,9 +78,13 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   _navigateToHome() {
-    Future.delayed(Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => HomeScreen()));
-    });
+    print(
+        'Navigating to home...'); // Эта строка будет печатать сообщение в консоль
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HomeScreen(apiClient: widget.apiClient),
+      ),
+    );
   }
 }

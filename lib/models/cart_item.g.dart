@@ -23,7 +23,7 @@ class CartItemAdapter extends TypeAdapter<CartItem> {
       title: fields[1] as String,
       price: fields[2] as int,
       quantity: fields[3] as int,
-      imageUrl: fields[4] as String?,
+      thumbnailUrl: fields[4] as String?,
       weight: fields[5] != null ? double.parse(fields[5].toString()) : null,
       minimumWeight:
           fields[6] != null ? double.parse(fields[6].toString()) : null,
@@ -45,7 +45,7 @@ class CartItemAdapter extends TypeAdapter<CartItem> {
       ..writeByte(3)
       ..write(obj.quantity)
       ..writeByte(4)
-      ..write(obj.imageUrl)
+      ..write(obj.thumbnailUrl)
       ..writeByte(5)
       ..write(obj.weight)
       ..writeByte(6)

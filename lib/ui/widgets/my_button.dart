@@ -28,10 +28,12 @@ class _MyButtonState extends State<MyButton> {
 
   @override
   void didUpdateWidget(covariant MyButton oldWidget) {
-    if (widget.isChecked != oldWidget.isChecked) {
-      _isClicked = widget.isChecked;
-    }
     super.didUpdateWidget(oldWidget);
+    if (widget.isChecked != oldWidget.isChecked) {
+      setState(() {
+        _isClicked = widget.isChecked;
+      });
+    }
   }
 
   @override
