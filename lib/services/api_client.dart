@@ -1,3 +1,4 @@
+import 'dart:convert'; // Импорт для json.encode
 import 'package:http/http.dart' as http;
 import '../config.dart' show Config;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -11,6 +12,23 @@ class ApiClient {
         .replace(queryParameters: queryParameters ?? {});
 
     final response = await _client.get(uri);
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
+    return response;
+  }
+
+  Future<http.Response> sendOrder(
+      String endpoint, Map<String, dynamic> body) async {
+    final uri = Uri.parse('${Config.strapiUrl}/api/$endpoint');
+
+    final response = await _client.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({'data': body}),
+    );
+
     print('Response status: ${response.statusCode}');
     print('Response body: ${response.body}');
     return response;

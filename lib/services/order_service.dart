@@ -1,9 +1,9 @@
-import 'package:supabase/supabase.dart';
 import 'package:intl/intl.dart';
-import 'package:supabase/supabase.dart';
+import 'api_client.dart'; // Убедитесь, что путь к файлу правильный
+import '../services/time_service.dart'; // Импортируйте TimeService
 
-final supabase = SupabaseClient('https://yxsrcgwplogjoecppegy.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4c3JjZ3dwbG9nam9lY3BwZWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTMzMTIzNjIsImV4cCI6MjAwODg4ODM2Mn0.B3QQwk4SmbkIWmVicbkX70BvxxTry9MQRd3EwjYl9AU');
+DateTime timeOrder =
+    DateTime.parse(TimeService.getCurrentTime()); // Получение текущего времени
 
 class Order {
   final int orderNumber;
@@ -12,7 +12,7 @@ class Order {
   final String shippingAddress; // Новое поле
   final String paymentMethod; // Новое поле
   final String phone; // Новое поле
-  final String timeOrder;
+  final DateTime timeOrder; // Изменено на DateTime
 
   Order({
     required this.orderNumber,
@@ -21,21 +21,12 @@ class Order {
     required this.shippingAddress, // Новый параметр
     required this.paymentMethod, // Новый параметр
     required this.phone, // Новый параметр
-    required this.timeOrder,
+    required this.timeOrder, // Изменено на DateTime
   });
 
   Map<String, dynamic> toJson() {
-    // Преобразование времени в формат, который требуется для PostgreSQL
-    String formattedTimeOrder;
-    try {
-      DateTime parsedDate =
-          DateFormat('HH:mm, dd MMMM yyyy', 'ru_RU').parse(timeOrder);
-      formattedTimeOrder = DateFormat('yyyy-MM-ddTHH:mm:ss').format(parsedDate);
-    } catch (e) {
-      print('Error formatting date: $e');
-      formattedTimeOrder =
-          timeOrder; // Если преобразование не удалось, используем исходный формат
-    }
+    String formattedTimeOrder =
+        DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(timeOrder.toUtc());
 
     return {
       'orderNumber': orderNumber,
@@ -44,28 +35,27 @@ class Order {
       'shipping_address': shippingAddress,
       'payment_method': paymentMethod,
       'phone': phone,
-      'order_date': formattedTimeOrder,
+      'order_date':
+          formattedTimeOrder, // Обновлено для соответствия новому типу данных
     };
   }
 }
 
 class OrderService {
+  static final ApiClient _apiClient =
+      ApiClient(); // Создайте экземпляр ApiClient
+
   static Future<bool> sendOrderToDatabase(Order order) async {
     try {
-      final response = await supabase.from('orders').insert(order.toJson());
+      final response = await _apiClient.sendOrder('orders', order.toJson());
 
-      if (response == null) {
-        print("Supabase response is null");
-        return false;
-      }
-
-      if (response.error != null) {
-        print("Supabase Error: ${response.error?.message}");
-      }
-
-      if (response.status == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Успешный запрос
         return true;
       } else {
+        // Неудачный запрос
+        print("Error: ${response.statusCode}");
+        print("Error message: ${response.body}");
         return false;
       }
     } catch (e) {

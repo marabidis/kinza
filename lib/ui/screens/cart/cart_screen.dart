@@ -15,19 +15,9 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/services.dart';
 import '/config.dart';
+import '/services/time_service.dart'; // Импортируйте TimeService
 
-String getCurrentTime() {
-  final tz.TZDateTime now = tz.TZDateTime.now(tz.getLocation('Europe/Samara'));
-
-  // Если требуется только время
-  final DateFormat formatter = DateFormat('HH:mm:ss', 'ru_RU');
-
-  // Если требуется дата и время
-  // final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss', 'ru_RU');
-
-  log("TIME: ${now.subtract(const Duration(hours: 1))}");
-  return formatter.format(now.subtract(const Duration(hours: 1)));
-}
+String currentTime = TimeService.getCurrentTime(); // Получение текущего времени
 
 ValueNotifier<DeliveryMethod> _deliveryMethodNotifier =
     ValueNotifier<DeliveryMethod>(DeliveryMethod.courier);
@@ -460,8 +450,8 @@ class _CartScreenState extends State<CartScreen> {
     StringBuffer details = StringBuffer();
 
     details.writeln("Заказ №$orderNumber");
-    details
-        .writeln("Время заказа: ${getCurrentTime()}"); // Добавляем время заказа
+    details.writeln(
+        "Время заказа: ${TimeService.getCurrentTime()}"); // Добавляем время заказа
 
     details.writeln("Детали заказа:");
     details.writeln("Метод: $method");
@@ -491,8 +481,8 @@ class _CartScreenState extends State<CartScreen> {
       shippingAddress: address,
       paymentMethod: method,
       phone: phoneNumber,
-      timeOrder:
-          getCurrentTime(), // передаем текущее время в параметр timeOrder
+      timeOrder: DateFormat('yyyy-MM-dd HH:mm:ss').parse(TimeService
+          .getCurrentTime()), // передаем преобразованное текущее время в параметр timeOrder
     );
   }
 
