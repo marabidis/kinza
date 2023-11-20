@@ -86,7 +86,7 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
             ),
             SizedBox(height: 8.0),
             Text(
-              "Вес: ${widget.product.weight} г",
+              "Вес: ${widget.product.weight} кг",
               style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 8.0),

@@ -297,7 +297,7 @@ class _CartScreenState extends State<CartScreen> {
                             subtitle: Container(
                               child: Text(
                                 item.weight != null
-                                    ? '${item.weight} гр.'
+                                    ? '${item.weight} кг'
                                     : 'Вес не указан',
                                 style: TextStyle(
                                   fontFamily: 'Roboto',

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../widgets/horizontal_menu.dart';
-import '/models/CatalogFood.dart';
+import '../../../models/CatalogFood.dart';
 import '../../widgets/foodCatalog.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -9,11 +9,11 @@ import 'dart:developer';
 import '../cart/cart_screen.dart';
 import '../../widgets/cart/floating_cart_button.dart';
 import 'product/product_detail_widget.dart';
-import '/services/api_client.dart';
-import '/models/product.dart'; // Импортирование модели продукта
-import '/services/utils.dart'; // замените 'path_to' на путь к вашему файлу utils.dart
+import '../../../services/api_client.dart';
+import '../../../models/product.dart';
+import '../../../services/utils.dart'; // Убедитесь, что sortCategories доступна из этого файла
 
-const _ITEM_HEIGHT = 153.0;
+const _ITEM_HEIGHT = 145.0;
 
 class HomeScreen extends StatefulWidget {
   final ApiClient apiClient;
@@ -25,13 +25,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final CatalogFoodRepository nameCategory; // Changed to late final
+  late final CatalogFoodRepository nameCategory;
   String? activeCategory;
   bool _isLoading = true;
-  List<Product> _data =
-      []; // Изменено с List<Map<String, dynamic>> на List<Product>
-
+  List<Product> _data = [];
   ScrollController _controller = ScrollController();
+  GlobalKey<HorizontalMenuState> menuKey = GlobalKey();
+  double _lastOffset = 0; // Для отслеживания последнего смещения
+  bool _isFirstScroll = true; // Для проверки первой прокрутки
 
   bool isItemInCart(Product product) {
     return cartBox != null && cartBox!.containsKey(product.id.toString());
@@ -46,32 +47,26 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       builder: (context) {
         return ProductDetailWidget(
-          product:
-              product, // Теперь это правильно, если в ProductDetailWidget параметр назван product
+          product: product,
           onAddToCart: () {
-            _toggleItemInCart(context, product); // Изменено на product
+            _toggleItemInCart(context, product);
           },
-          isInCart: isItemInCart(product), // Изменено на product
+          isInCart: isItemInCart(product),
           onCartStateChanged: () {
-            setState(
-                () {}); // Просто вызываем setState для перестройки виджетов
+            setState(() {});
           },
           onQuantityChanged: (quantity) {
             if (!isItemInCart(product)) {
-              // Изменено на product
-              _toggleItemInCart(
-                  context, product, quantity); // Изменено на product
-            } // Дополнительная логика, если требуется
+              _toggleItemInCart(context, product, quantity);
+            }
           },
           onWeightChanged: (weight) {
             if (!isItemInCart(product)) {
-              // Изменено на product
-              _toggleItemInCart(context, product); // Изменено на product
+              _toggleItemInCart(context, product);
             }
-            // Дополнительная логика, если требуется
           },
           onItemAdded: () {
-            // Здесь ваш код, который должен быть выполнен, когда элемент добавлен
+            // Код, выполняемый при добавлении элемента
           },
         );
       },
@@ -84,22 +79,31 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     nameCategory = CatalogFoodRepository(widget.apiClient);
-    print('HomeScreen initState called'); // Добавьте эту строку
+    _controller.addListener(_scrollListener);
     _loadCartData();
     _fetchData();
-    _controller.addListener(_scrollListener);
   }
 
   void _scrollListener() {
-    print('Scrolling...');
     int itemIndex = (_controller.offset / _ITEM_HEIGHT).round();
     if (itemIndex >= 0 && itemIndex < _data.length) {
-      String currentCategory = _data[itemIndex]
-          .category; // Обновлено с _data[itemIndex]['category'] на _data[itemIndex].category
+      String currentCategory = _data[itemIndex].category;
       if (currentCategory != activeCategory) {
-        setState(() {
-          activeCategory = currentCategory;
-        });
+        bool isScrollingDown = _controller.offset > _lastOffset;
+
+        _lastOffset = _controller.offset;
+
+        if (_isFirstScroll) {
+          _isFirstScroll = false;
+          return;
+        }
+
+        if (isScrollingDown || _controller.offset == 0) {
+          setState(() {
+            activeCategory = currentCategory;
+          });
+          menuKey.currentState?.setActiveCategory(currentCategory);
+        }
       }
     }
   }
@@ -126,9 +130,9 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       if (cartBox!.containsKey(product.id.toString())) {
         await cartBox!.delete(product.id.toString());
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            duration: Duration(microseconds: 600),
-            content: Text('${product.title} был удален из корзины!')));
+        // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        //     duration: Duration(microseconds: 600),
+        //     content: Text('${product.title} был удален из корзины!')));
       } else {
         final cartItem = CartItem(
           id: product.id.toString(),
@@ -144,9 +148,9 @@ class _HomeScreenState extends State<HomeScreen> {
         );
 
         await cartBox!.put(product.id.toString(), cartItem);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            duration: Duration(microseconds: 1000),
-            content: Text('${product.title} был добавлен в корзину!')));
+        // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        //     duration: Duration(microseconds: 1000),
+        //     content: Text('${product.title} был добавлен в корзину!')));
       }
     } catch (e) {
       print('Ошибка при работе с коробкой Hive: $e');
@@ -154,46 +158,46 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   _fetchData() async {
-    log("Запрашиваем данные");
-
     setState(() {
       _isLoading = true;
     });
 
-    List<Product> newData = await nameCategory
-        .fetchFoodItemsByCategory('Пицца'); // Уточнено: List<Product>
-    log('Полученные данные: $newData');
+    try {
+      List<Product> newData =
+          await nameCategory.fetchFoodItemsByCategory('Пицца');
+      if (newData.isNotEmpty) {
+        List<Map<String, dynamic>> dataToSort = newData.map((product) {
+          return {'category': product.category, 'product': product};
+        }).toList();
 
-    // Сортировка данных
-    List<Map<String, dynamic>> dataToSort = newData.map((product) {
-      return {
-        'category': product.category,
-        'product': product,
-      };
-    }).toList();
-    List<Map<String, dynamic>> sortedData = sortCategories(dataToSort);
-
-    setState(() {
-      _data.addAll(
-          sortedData.map((item) => item['product'] as Product).toList());
-      if (_data.isNotEmpty) {
-        activeCategory = _data[0]
-            .category; // Обновлено с _data[0]['category'] на _data[0].category
+        List<Map<String, dynamic>> sortedData = sortCategories(dataToSort);
+        setState(() {
+          _data = sortedData.map((item) => item['product'] as Product).toList();
+          activeCategory = _data[0].category;
+          _isLoading = false;
+        });
+      } else {
+        print("Нет данных для загрузки");
+        setState(() {
+          _isLoading = false;
+        });
       }
-      _isLoading = false;
-    });
+    } catch (e) {
+      print("Ошибка при загрузке данных: $e");
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: HorizontalMenu(
+        key: menuKey,
         onCategoryChanged: (category) {
           int? index;
           switch (category) {
-            case 'Хачапури':
-              index = _data.indexWhere((item) => item.category == 'Хачапури');
-              break;
             case 'Пиццы':
               index = _data.indexWhere((item) => item.category == 'Пицца');
               break;
@@ -201,61 +205,80 @@ class _HomeScreenState extends State<HomeScreen> {
               index = _data
                   .indexWhere((item) => item.category == 'Блюда на мангале');
               break;
+            case 'Хачапури':
+              index = _data.indexWhere((item) => item.category == 'Хачапури');
+              break;
             case 'К блюду':
               index = _data.indexWhere((item) => item.category == 'К блюду');
               break;
           }
 
           if (index != null && index != -1) {
-            _controller.animateTo(
-              index * _ITEM_HEIGHT,
-              duration: Duration(milliseconds: 500),
-              curve: Curves.decelerate,
-            );
+            _controller.animateTo(index * _ITEM_HEIGHT,
+                duration: Duration(milliseconds: 500),
+                curve: Curves.decelerate);
           }
         },
+        activeCategory: activeCategory ?? 'Пиццы',
       ),
-      body: cartBox != null
-          ? ValueListenableBuilder(
-              valueListenable: cartBox!.listenable(),
-              builder: (context, Box<CartItem> box, _) {
-                return ListView.builder(
+      body: _buildBody(),
+      floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
+
+  Widget _buildBody() {
+    return cartBox != null
+        ? ValueListenableBuilder<Box<CartItem>>(
+            valueListenable: cartBox!.listenable(),
+            builder: (context, box, _) {
+              return NotificationListener<ScrollNotification>(
+                onNotification: (ScrollNotification notification) {
+                  if (notification.metrics.pixels >= 0 &&
+                      notification.metrics.pixels <=
+                          notification.metrics.maxScrollExtent) {
+                    // Дополнительная проверка, чтобы избежать отрицательного индекса
+                    var categoryIndex =
+                        (notification.metrics.pixels / _ITEM_HEIGHT).floor();
+                    // ... остальная логика ...
+                  }
+                  return true;
+                },
+                child: ListView.builder(
                   controller: _controller,
                   itemCount: _data.length,
                   itemBuilder: (context, index) {
-                    var product = _data[
-                        index]; // изменили имя переменной на product для ясности
+                    var product = _data[index];
                     return GestureDetector(
                       onTap: () => _showProductDetail(context, product),
                       child: CatalogItemWidget(
-                        product:
-                            product, // Передайте объект Product в CatalogItemWidget
+                        product: product,
                         isChecked: isItemInCart(product),
                         onAddToCart: () => _toggleItemInCart(context, product),
                       ),
                     );
                   },
-                );
-              },
-            )
-          : Center(child: CircularProgressIndicator()),
-      floatingActionButton: cartBox != null
-          ? ValueListenableBuilder(
-              valueListenable: cartBox!.listenable(),
-              builder: (context, Box<CartItem> box, _) {
-                return FloatingCartButton(
-                  itemCount: box.values.fold(0,
-                      (previousValue, item) => previousValue + item.quantity),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => CartScreen()),
-                    );
-                  },
-                );
-              },
-            )
-          : Container(),
-    );
+                ),
+              );
+            },
+          )
+        : Center(child: CircularProgressIndicator());
+  }
+
+  Widget _buildFloatingActionButton() {
+    return cartBox != null
+        ? ValueListenableBuilder<Box<CartItem>>(
+            valueListenable: cartBox!.listenable(),
+            builder: (context, box, _) {
+              return FloatingCartButton(
+                itemCount: box.values.fold(
+                    0, (previousValue, item) => previousValue + item.quantity),
+                onPressed: () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => CartScreen()));
+                },
+              );
+            },
+          )
+        : Container();
   }
 }

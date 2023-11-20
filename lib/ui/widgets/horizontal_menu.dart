@@ -1,73 +1,107 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_kinza/styles/app_constants.dart';
 
 class HorizontalMenu extends AppBar {
   final Function(String) onCategoryChanged;
+  final String activeCategory;
 
-  HorizontalMenu({required this.onCategoryChanged});
+  HorizontalMenu({
+    required this.onCategoryChanged,
+    required this.activeCategory,
+    Key? key,
+  }) : super(key: key);
 
   @override
-  _HorizontalMenuState createState() => _HorizontalMenuState();
+  HorizontalMenuState createState() => HorizontalMenuState();
 }
 
-class _HorizontalMenuState extends State<HorizontalMenu> {
-  String activeCategory = 'Пиццы'; // Изначально активна категория 'Пиццы'
+class HorizontalMenuState extends State<HorizontalMenu> {
+  late ScrollController scrollController;
+  GlobalKey keyForCategoryPizza = GlobalKey();
+  GlobalKey keyForCategoryGrill = GlobalKey();
+  GlobalKey keyForCategoryHachapuri = GlobalKey();
+  GlobalKey keyForCategorySideDishes = GlobalKey();
+  // Добавьте ключи для других категорий, если они есть
+
+  @override
+  void initState() {
+    super.initState();
+    scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
 
   void setActiveCategory(String category) {
     setState(() {
-      activeCategory = category;
+      widget.onCategoryChanged(category);
+      scrollToCategory(category);
     });
+  }
+
+  void scrollToCategory(String category) {
+    GlobalKey? categoryKey;
+    switch (category) {
+      case 'Пиццы':
+        categoryKey = keyForCategoryPizza;
+        break;
+      case 'Блюда на мангале':
+        categoryKey = keyForCategoryGrill;
+        break;
+      case 'Хачапури':
+        categoryKey = keyForCategoryHachapuri;
+        break;
+      case 'К блюду':
+        categoryKey = keyForCategorySideDishes;
+        break;
+      // Добавьте обработку для других категорий, если они есть
+    }
+
+    if (categoryKey != null && categoryKey.currentContext != null) {
+      Scrollable.ensureVisible(categoryKey.currentContext!);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: Colors.transparent, // Прозрачный фон AppBar
-      elevation: 0, // Убираем тень AppBar
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       title: Container(
-        width: 390, // Фиксированная ширина меню
-        height: 34, // Высота меню
+        width: MediaQuery.of(context).size.width,
+        height: 34,
         child: ListView(
-          scrollDirection: Axis.horizontal, // Горизонтальная прокрутка
+          controller: scrollController,
+          scrollDirection: Axis.horizontal,
           children: [
             MenuButton(
+              key: keyForCategoryPizza,
               title: 'Пиццы',
-              isActive: activeCategory == 'Пиццы',
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                setActiveCategory('Пиццы');
-                widget.onCategoryChanged('Пиццы');
-              },
-            ), // Первый раздел активный
+              isActive: widget.activeCategory == 'Пиццы',
+              onTap: () => setActiveCategory('Пиццы'),
+            ),
             MenuButton(
+              key: keyForCategoryGrill,
               title: 'Блюда на мангале',
-              isActive: activeCategory == 'Блюда на мангале',
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                setActiveCategory('Блюда на мангале');
-                widget.onCategoryChanged('Блюда на мангале');
-              },
+              isActive: widget.activeCategory == 'Блюда на мангале',
+              onTap: () => setActiveCategory('Блюда на мангале'),
             ),
             MenuButton(
+              key: keyForCategoryHachapuri,
               title: 'Хачапури',
-              isActive: activeCategory == 'Хачапури',
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                setActiveCategory('Хачапури');
-                widget.onCategoryChanged('Хачапури');
-              },
+              isActive: widget.activeCategory == 'Хачапури',
+              onTap: () => setActiveCategory('Хачапури'),
             ),
             MenuButton(
+              key: keyForCategorySideDishes,
               title: 'К блюду',
-              isActive: activeCategory == 'К блюду',
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                setActiveCategory('К блюду');
-                widget.onCategoryChanged('К блюду');
-              },
+              isActive: widget.activeCategory == 'К блюду',
+              onTap: () => setActiveCategory('К блюду'),
             ),
-            // Добавьте другие категории меню по аналогии
+            // Добавьте здесь другие категории, если они есть.
           ],
         ),
       ),
@@ -78,42 +112,38 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
 class MenuButton extends StatelessWidget {
   final String title;
   final bool isActive;
-  final Function()? onTap; // Функция обратного вызова при нажатии
+  final Function()? onTap;
+  final GlobalKey key;
 
   MenuButton({
     required this.title,
     this.isActive = false,
     this.onTap,
-  });
+    required this.key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    Color backgroundColor = isActive
-        ? AppColors.orange // Фон активной кнопки
-        : Color.fromRGBO(195, 195, 195, 1); // Фон неактивных кнопок
-
+    Color backgroundColor =
+        isActive ? AppColors.orange : Color.fromRGBO(195, 195, 195, 1);
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8), // Отступы между кнопками
+      padding: EdgeInsets.symmetric(horizontal: 8),
       child: ElevatedButton(
-        onPressed: onTap, // Используем функцию обратного вызова при нажатии
+        onPressed: onTap,
         style: ButtonStyle(
-          elevation: MaterialStateProperty.all(0.0), // Убираем тень
-          backgroundColor:
-              MaterialStateProperty.all(backgroundColor), // Цвет фона кнопки
-          padding: MaterialStateProperty.all(EdgeInsets.symmetric(
-              horizontal: 16, vertical: 8)), // Отступы внутри кнопки
-          shape: MaterialStateProperty.all(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(50), // Задайте радиус здесь
-            ),
-          ),
+          elevation: MaterialStateProperty.all(0.0),
+          backgroundColor: MaterialStateProperty.all(backgroundColor),
+          padding: MaterialStateProperty.all(
+              EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
+          shape: MaterialStateProperty.all(RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50),
+          )),
         ),
         child: Container(
-          alignment: Alignment.center, // Выравнивание текста по центру
+          alignment: Alignment.center,
           child: Text(
             title,
-            style: TextStyle(
-                fontSize: 16, color: AppColors.white), // Стиль текста на кнопке
+            style: TextStyle(fontSize: 16, color: AppColors.white),
           ),
         ),
       ),
