@@ -130,9 +130,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       if (cartBox!.containsKey(product.id.toString())) {
         await cartBox!.delete(product.id.toString());
-        // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        //     duration: Duration(microseconds: 600),
-        //     content: Text('${product.title} был удален из корзины!')));
       } else {
         final cartItem = CartItem(
           id: product.id.toString(),
@@ -148,9 +145,6 @@ class _HomeScreenState extends State<HomeScreen> {
         );
 
         await cartBox!.put(product.id.toString(), cartItem);
-        // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        //     duration: Duration(microseconds: 1000),
-        //     content: Text('${product.title} был добавлен в корзину!')));
       }
     } catch (e) {
       print('Ошибка при работе с коробкой Hive: $e');
@@ -198,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onCategoryChanged: (category) {
           int? index;
           switch (category) {
-            case 'Пиццы':
+            case 'Пицца':
               index = _data.indexWhere((item) => item.category == 'Пицца');
               break;
             case 'Блюда на мангале':
@@ -219,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 curve: Curves.decelerate);
           }
         },
-        activeCategory: activeCategory ?? 'Пиццы',
+        activeCategory: activeCategory ?? 'Пицца',
       ),
       body: _buildBody(),
       floatingActionButton: _buildFloatingActionButton(),
