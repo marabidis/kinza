@@ -5,10 +5,8 @@ class CartItemControl extends StatefulWidget {
   final CartItem item;
   final ValueChanged<int> onQuantityChanged;
   final ValueChanged<double> onWeightChanged;
-  final VoidCallback
-      onAddToCart; // новый колбек для добавления товара в корзину
-  final bool
-      isItemInCart; // новый параметр для проверки, находится ли товар уже в корзине
+  final VoidCallback onAddToCart;
+  final bool isItemInCart;
   final int maxQuantity;
   final double minWeight;
   final double maxWeight;
@@ -18,8 +16,8 @@ class CartItemControl extends StatefulWidget {
     required this.item,
     required this.onQuantityChanged,
     required this.onWeightChanged,
-    required this.onAddToCart, // инициализация нового колбека
-    required this.isItemInCart, // инициализация нового параметра
+    required this.onAddToCart,
+    required this.isItemInCart,
     this.maxQuantity = 999,
     this.minWeight = 0.4,
     this.maxWeight = 999,
@@ -107,7 +105,7 @@ class _CartItemControlState extends State<CartItemControl> {
         }),
         SizedBox(width: 20),
         Text(
-          '${(widget.item.price * _weight * 10).toStringAsFixed(2).contains('.00') ? (widget.item.price * _weight * 10).toInt().toString() : (widget.item.price * _weight * 10).toStringAsFixed(2)} ₽', // умножаем на 10, если цена указана за 0.1 кг
+          '${(widget.item.price * _weight * 10).toStringAsFixed(2).contains('.00') ? (widget.item.price * _weight * 10).toInt().toString() : (widget.item.price * _weight * 10).toStringAsFixed(2)} ₽',
           style: TextStyle(
             fontFamily: 'Roboto',
             fontSize: 16,
@@ -128,13 +126,10 @@ class _CartItemControlState extends State<CartItemControl> {
       return; // Если значение не изменилось, ничего не делаем
     }
 
-    // Проверяем, что вес не уменьшается ниже минимального веса из базы данных
-    if (widget.isWeightBased && newValue < (widget.item.minimumWeight ?? 0.4)) {
+    if (widget.isWeightBased &&
+        newValue < (widget.item.minimumWeight ?? widget.minWeight)) {
       return;
     }
-
-    widget
-        .onAddToCart(); // Вызываем onAddToCart() при каждом обновлении значения
 
     setState(() {
       if (widget.isWeightBased) {
@@ -155,7 +150,7 @@ class _CartItemControlState extends State<CartItemControl> {
         style: ElevatedButton.styleFrom(
           padding: EdgeInsets.symmetric(vertical: 2, horizontal: 6.5),
           primary: Color.fromRGBO(103, 118, 140, 0.1),
-          elevation: 0, // Убираем тень под кнопкой
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),

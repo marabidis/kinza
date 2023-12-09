@@ -5,7 +5,7 @@ import 'package:flutter_kinza/styles/app_constants.dart';
 class MyButton extends StatefulWidget {
   final bool isChecked;
   final String buttonText;
-  final Function() onPressed;
+  final VoidCallback onPressed;
 
   MyButton({
     required this.buttonText,
@@ -18,12 +18,12 @@ class MyButton extends StatefulWidget {
 }
 
 class _MyButtonState extends State<MyButton> {
-  bool _isClicked = false;
+  late bool _isClicked;
 
   @override
   void initState() {
-    _isClicked = widget.isChecked;
     super.initState();
+    _isClicked = widget.isChecked;
   }
 
   @override
@@ -50,8 +50,8 @@ class _MyButtonState extends State<MyButton> {
         backgroundColor: MaterialStateProperty.resolveWith<Color>(
           (Set<MaterialState> states) {
             return _isClicked
-                ? Color(0x94CA2033)
-                : AppColors.green; // используйте AppColors.green
+                ? Color(0xFFCA2033) // Изменено значение цвета
+                : AppColors.green; // Используется константа AppColors
           },
         ),
         elevation: MaterialStateProperty.all(0.0),
@@ -59,13 +59,12 @@ class _MyButtonState extends State<MyButton> {
             horizontal: AppConstants.padding,
             vertical: AppConstants.paddingSmall)),
         shape: MaterialStateProperty.all(RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants
-              .baseRadius), // используйте AppConstants для радиуса скругления
+          borderRadius: BorderRadius.circular(AppConstants.baseRadius),
         )),
       ),
       child: Text(
         _isClicked ? 'В корзине' : widget.buttonText,
-        style: AppStyles.buttonTextStyle, // Установите стиль текста здесь
+        style: AppStyles.buttonTextStyle,
       ),
     );
   }
