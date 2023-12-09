@@ -1,7 +1,7 @@
 import 'dart:developer';
 
 import '../../../styles/app_constants.dart';
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import '../../../models/cart_item.dart';
@@ -275,8 +275,9 @@ class _CartScreenState extends State<CartScreen> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(15),
                                 image: DecorationImage(
-                                  image: NetworkImage(item.thumbnailUrl ??
-                                      'fallback_image_url'), // Измените эту строку
+                                  image: CachedNetworkImageProvider(item
+                                          .thumbnailUrl ??
+                                      'fallback_image_url'), // Используйте CachedNetworkImageProvider здесь
                                   fit: BoxFit.contain,
                                   onError: (exception, stackTrace) => print(
                                       'Ошибка загрузки изображения: $exception'),
