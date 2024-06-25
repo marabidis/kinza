@@ -128,7 +128,11 @@ class _CartItemControlState extends State<CartItemControl> {
 
     if (widget.isWeightBased &&
         newValue < (widget.item.minimumWeight ?? widget.minWeight)) {
-      return;
+      return; // Не позволяем весу быть меньше минимального значения
+    }
+
+    if (!widget.isWeightBased && newValue < 1) {
+      return; // Не позволяем количеству быть меньше 1
     }
 
     setState(() {
@@ -144,11 +148,11 @@ class _CartItemControlState extends State<CartItemControl> {
 
   Widget _buildButton(String label, VoidCallback onPressed) {
     return SizedBox(
-      width: 23,
-      height: 23,
+      width: 30, // Увеличено для удобства
+      height: 30, // Увеличено для удобства
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          padding: EdgeInsets.symmetric(vertical: 2, horizontal: 6.5),
+          padding: EdgeInsets.all(0),
           primary: Color.fromRGBO(103, 118, 140, 0.1),
           elevation: 0,
           shape: RoundedRectangleBorder(

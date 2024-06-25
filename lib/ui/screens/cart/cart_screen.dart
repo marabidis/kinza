@@ -1,26 +1,18 @@
-import 'dart:developer';
-
-import '../../../styles/app_constants.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_kinza/styles/app_constants.dart';
+import 'package:flutter_kinza/ui/widgets/cart/cart_item_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import '../../../models/cart_item.dart';
-import '../../widgets/cart/cart_item_control.dart';
+import 'package:flutter_kinza/models/cart_item.dart';
 import '../orders/success_order_page.dart';
 import 'package:http/http.dart' as http;
-import '../../../services/order_service.dart';
-import '../../../ forms/OrderForm.dart';
+import 'package:flutter_kinza/services/order_service.dart';
+import '/forms/OrderForm.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/services.dart';
-import '/config.dart';
-import '/services/time_service.dart'; // Импортируйте TimeService
-
-String currentTime = TimeService.getCurrentTime(); // Получение текущего времени
-
-ValueNotifier<DeliveryMethod> _deliveryMethodNotifier =
-    ValueNotifier<DeliveryMethod>(DeliveryMethod.courier);
+import 'package:flutter_kinza/config.dart';
+import 'package:flutter_kinza/services/time_service.dart';
 
 class CartScreen extends StatefulWidget {
   @override
@@ -29,46 +21,10 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   late Box<CartItem> cartBox;
-  bool _isProcessing = false; // добавьте это
+  bool _isProcessing = false;
   final GlobalKey<OrderFormState> _orderFormKey = GlobalKey<OrderFormState>();
-  final GlobalKey<AnimatedListState> listViewKey =
-      GlobalKey<AnimatedListState>();
-
-  final deliveryMethodNotifier =
+  final ValueNotifier<DeliveryMethod> _deliveryMethodNotifier =
       ValueNotifier<DeliveryMethod>(DeliveryMethod.courier);
-
-  DeliveryMethod _currentDeliveryMethod() {
-    log("[DEBUG]: deliveryMethodNotifier: ${deliveryMethodNotifier.value}");
-    return deliveryMethodNotifier.value;
-  }
-
-  void _deleteItemFromCart(int index) {
-    // Проверяем, что индекс находится в допустимом диапазоне
-    if (index >= 0 && index < cartBox.length) {
-      cartBox.deleteAt(index);
-
-      setState(() {
-        // Этот вызов обновит UI
-      });
-
-      if (listViewKey.currentState != null) {
-        listViewKey.currentState!.removeItem(
-          index,
-          (context, animation) {
-            return SizedBox.shrink();
-          },
-        );
-      } else {
-        print('Ошибка: currentState is null');
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    deliveryMethodNotifier.dispose(); // не забудьте его освободить
-    super.dispose();
-  }
 
   @override
   void initState() {
@@ -80,425 +36,267 @@ class _CartScreenState extends State<CartScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "Ваш заказ",
-          style: AppStyles.titleTextStyle.copyWith(
-            color: AppColors.black, // Изменение цвета текста на черный
-          ),
-        ),
-        backgroundColor: Colors.white, // Изменение фона AppBar на белый
-        iconTheme: IconThemeData(
-          color: AppColors.black, // Изменение цвета иконок на черный
-        ),
-        elevation: 0.0, // Удаление тени
+        title: Text("Ваш заказ",
+            style: AppStyles.titleTextStyle.copyWith(color: AppColors.black)),
+        backgroundColor: Colors.white,
+        iconTheme: IconThemeData(color: AppColors.black),
+        elevation: 0.0,
       ),
-      bottomNavigationBar: cartBox.isEmpty
-          ? const SizedBox()
-          : Column(
+      body: cartBox.isEmpty ? _buildEmptyCart() : _buildCartList(),
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  Widget _buildEmptyCart() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Image.asset('assets/cat.png', height: 150),
+          SizedBox(height: 20),
+          Text("Пока, тут пусто!", style: AppStyles.subtitleTextStyle),
+          SizedBox(height: 10),
+          Text(
+              "Ваша корзина пуста, перейдите по кнопке в меню и выберите понравившийся товар.",
+              style: AppStyles.bodyTextStyle,
+              textAlign: TextAlign.center),
+          SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+            child: Text("Перейти в меню", style: AppStyles.buttonTextStyle),
+            style: AppStyles.elevatedButtonStyle,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCartList() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: AppConstants.padding),
+        child: Column(
+          children: [
+            SizedBox(height: 16),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: cartBox.length,
+              itemBuilder: (context, index) {
+                final item = cartBox.getAt(index);
+                final isLastItem = index == cartBox.length - 1;
+                return item != null
+                    ? CartItemWidget(
+                        item: item,
+                        onDelete: () => _deleteItemFromCart(index),
+                        onQuantityChanged: (newQuantity) => _updateCartItem(
+                            index, item.copyWith(quantity: newQuantity)),
+                        onWeightChanged: (newWeight) => _updateCartItem(
+                            index, item.copyWith(weight: newWeight)),
+                        isLastItem: isLastItem, // Передаем параметр
+                      )
+                    : SizedBox.shrink();
+              },
+            ),
+            SizedBox(height: 16), // Добавьте этот отступ
+            OrderForm(
+              key: _orderFormKey,
+              deliveryMethodNotifier: _deliveryMethodNotifier,
+              updateDelivery: (DeliveryMethod method) =>
+                  setState(() => _deliveryMethodNotifier.value = method),
+              onSubmit: (DeliveryMethod method, String? name,
+                  String? phoneNumber, String? address, String? comment) {
+                if (_orderFormKey.currentState!.validate()) {
+                  _processOrder(method, name, phoneNumber, address, comment);
+                }
+              },
+              totalPrice: _getTotalSum(), // Передаем общую сумму заказа
+            ),
+            SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    final totalSum = _getTotalSum();
+    return cartBox.isEmpty
+        ? SizedBox.shrink()
+        : Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: // Вставьте ValueListenableBuilder перед OrderForm
-                      ValueListenableBuilder<DeliveryMethod>(
-                    valueListenable: _deliveryMethodNotifier,
-                    builder: (context, deliveryMethod, child) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 10.0),
-                        child: Text(
-                          _getDeliveryMessage(_getTotalSum(), deliveryMethod),
-                          textAlign: TextAlign.center,
-                          style: AppStyles.subtitleTextStyle,
-                        ),
-                      );
-                    },
+                if (_deliveryMethodNotifier.value == DeliveryMethod.courier &&
+                    totalSum >= 800)
+                  Text(
+                    'При заказе от 800 ₽ - доставка курьером бесплатная!',
+                    style: AppStyles.bodyTextStyle
+                        .copyWith(color: AppColors.green),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(
-                      left: 16.0, right: 16.0, bottom: 50.0), // Изменено здесь
-                  child: Container(
-                    width: 358,
-                    height: 51,
-                    child: ElevatedButton(
-                      onPressed: _isProcessing ||
-                              (_getTotalSum() < 600 &&
-                                  _currentDeliveryMethod() !=
-                                      DeliveryMethod.pickup)
-                          ? null
-                          : () async {
-                              if (_orderFormKey.currentState!.validate()) {
-                                setState(() {
-                                  _isProcessing = true; // Начало обработки
-                                });
-
-                                final formData =
-                                    _orderFormKey.currentState!.getFormData();
-                                String method = formData['method'] ?? '';
-                                String name = formData['name'] ?? '';
-                                String phoneNumber =
-                                    formData['phoneNumber'] ?? '';
-                                String address = formData['address'] ?? '';
-                                String comment = formData['comment'] ?? '';
-
-                                int orderNum = await incrementOrderNumber();
-                                Order order = await generateOrderDetails(
-                                  orderNum,
-                                  method,
-                                  name,
-                                  phoneNumber,
-                                  address,
-                                  comment,
-                                );
-                                await sendOrderToTelegram(order.details);
-                                await OrderService.sendOrderToDatabase(order);
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SuccessOrderPage(
-                                        orderNumber:
-                                            orderNum), // Используйте orderNum здесь
-                                  ),
-                                );
-
-                                setState(() {
-                                  _isProcessing = false; // Завершение обработки
-                                });
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Пожалуйста, заполните все обязательные поля формы!',
-                                    ),
-                                  ),
-                                );
-                                HapticFeedback.heavyImpact();
-                              }
-                            },
-                      style: AppStyles.elevatedButtonStyle,
-                      child: _isProcessing
-                          ? CircularProgressIndicator(
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            )
-                          : (_getTotalSum() < 600 &&
-                                  _currentDeliveryMethod() !=
+                SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: _isProcessing ||
+                          (_deliveryMethodNotifier.value ==
+                                  DeliveryMethod.courier &&
+                              totalSum < 800)
+                      ? null
+                      : () {
+                          if (_orderFormKey.currentState!.validate()) {
+                            final formData =
+                                _orderFormKey.currentState!.getFormData();
+                            _processOrder(
+                              formData['method'],
+                              formData['name'],
+                              formData['phoneNumber'],
+                              formData['address'],
+                              formData['comment'],
+                            );
+                          }
+                        },
+                  child: _isProcessing
+                      ? CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white))
+                      : Text(
+                          totalSum >= 800 ||
+                                  _deliveryMethodNotifier.value ==
                                       DeliveryMethod.pickup
-                              ? Text(
-                                  'Добавьте товары на ${600 - _getTotalSum()} ₽',
-                                  style: AppStyles.buttonTextStyle,
-                                )
-                              : Text(
-                                  'Оформить заказ на ${_getTotalSum()} ₽',
-                                  style: AppStyles.buttonTextStyle,
-                                )),
+                              ? 'Оформить заказ на ${totalSum} ₽'
+                              : 'Добавьте товаров еще на ${800 - totalSum} ₽',
+                          style: AppStyles.buttonTextStyle,
+                        ),
+                  style: AppStyles.elevatedButtonStyle.copyWith(
+                    minimumSize: MaterialStateProperty.all<Size>(
+                        Size(double.infinity, 48)),
+                    padding: MaterialStateProperty.all<EdgeInsets>(
+                      EdgeInsets.symmetric(vertical: AppConstants.paddingSmall),
                     ),
                   ),
                 ),
               ],
             ),
-      body: cartBox.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset('assets/cat.png', height: 150),
-                  SizedBox(height: 20),
-                  Text(
-                    "Пока, тут пусто!",
-                    style: AppStyles.subtitleTextStyle,
-                  ),
-                  SizedBox(height: 10),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text(
-                      "Ваша корзина пуста, перейдите по кнопке в меню и выберите понравившийся товар.",
-                      style: AppStyles.bodyTextStyle,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.padding,
-                    ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          HapticFeedback.mediumImpact();
-                          Navigator.popUntil(
-                              context,
-                              (route) => route
-                                  .isFirst); // Этот метод приведет вас к первой странице в стеке маршрутов (обычно главной).
-                        },
-                        child: Text(
-                          "Перейти в меню",
-                          style: AppStyles.buttonTextStyle,
-                        ),
-                        style: AppStyles.elevatedButtonStyle,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  ListView.separated(
-                    key: listViewKey,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: cartBox.length,
-                    separatorBuilder: (_, __) => const Divider(
-                      height: 16,
-                      thickness: 1,
-                      indent: 16,
-                      endIndent: 16,
-                    ),
-                    itemBuilder: (context, index) {
-                      final item = cartBox.getAt(index);
-                      if (item == null) return SizedBox.shrink();
+          );
+  }
 
-                      return Column(
-                        children: [
-                          ListTile(
-                            leading: Container(
-                              width: 70,
-                              height: 70,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(15),
-                                image: DecorationImage(
-                                  image: CachedNetworkImageProvider(item
-                                          .thumbnailUrl ??
-                                      'fallback_image_url'), // Используйте CachedNetworkImageProvider здесь
-                                  fit: BoxFit.contain,
-                                  onError: (exception, stackTrace) => print(
-                                      'Ошибка загрузки изображения: $exception'),
-                                ),
-                              ),
-                            ),
-                            title: Container(
-                              child: Text(
-                                item.title,
-                                style: TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color.fromRGBO(16, 25, 40, 1),
-                                ),
-                              ),
-                            ),
-                            subtitle: Container(
-                              child: Text(
-                                item.weight != null
-                                    ? '${item.weight} кг'
-                                    : 'Вес не указан',
-                                style: TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                            trailing: Container(
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                icon: Icon(Icons.delete,
-                                    color: const Color.fromARGB(
-                                        255, 116, 116, 116)),
-                                onPressed: () {
-                                  _deleteItemFromCart(index);
-                                },
-                              ),
-                            ),
-                          ),
-                          Container(
-                            margin: const EdgeInsets.only(
-                              left: 70 + 30,
-                              bottom: 8,
-                            ),
-                            child: CartItemControl(
-                              item: item,
-                              onQuantityChanged: (newQuantity) {
-                                if (newQuantity <= 0) {
-                                  _deleteItemFromCart(index);
-                                } else {
-                                  CartItem updatedItem = CartItem(
-                                    id: item.id,
-                                    title: item.title,
-                                    price: item.price,
-                                    weight: item.weight,
-                                    thumbnailUrl: item.thumbnailUrl,
-                                    quantity: newQuantity,
-                                    isWeightBased:
-                                        item.isWeightBased, // добавьте это поле
-                                    minimumWeight:
-                                        item.minimumWeight, // добавьте это поле
-                                    unit: item.unit, // добавьте это поле
-                                  );
+  void _deleteItemFromCart(int index) {
+    if (index >= 0 && index < cartBox.length) {
+      cartBox.deleteAt(index);
+      setState(() {});
+    }
+  }
 
-                                  cartBox.putAt(index, updatedItem);
-                                  setState(() {});
-                                }
-                              },
-                              onWeightChanged: (newWeight) {
-                                // Обновляем вес товара
-                                CartItem updatedItem = CartItem(
-                                  id: item.id,
-                                  title: item.title,
-                                  price: item.price,
-                                  weight: newWeight,
-                                  thumbnailUrl: item.thumbnailUrl,
-                                  quantity: item.quantity,
-                                  isWeightBased:
-                                      item.isWeightBased, // добавьте это поле
-                                  minimumWeight:
-                                      item.minimumWeight, // добавьте это поле
-                                  unit: item.unit, // добавьте это поле
-                                );
+  void _updateCartItem(int index, CartItem updatedItem) {
+    cartBox.putAt(index, updatedItem);
+    setState(() {});
+  }
 
-                                cartBox.putAt(index, updatedItem);
-                                setState(() {});
-                              },
-                              isWeightBased: item
-                                  .isWeightBased, // Предполагая, что у вас есть такой флаг в модели CartItem
-                              minWeight:
-                                  0.1, // Минимальный вес товара (можно адаптировать под свои нужды)
-                              maxWeight:
-                                  999, // Максимальный вес товара (можно адаптировать под свои нужды)
-                              maxQuantity:
-                                  999, // Максимальное количество товара (можно адаптировать под свои нужды)
-                              onAddToCart: () {
-                                // ваш код для добавления товара в корзину
-                              },
-                              isItemInCart:
-                                  true, // или false, в зависимости от того, находится ли товар в корзине
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  OrderForm(
-                    deliveryMethodNotifier: _deliveryMethodNotifier,
-                    updateDelivery: (v) {
-                      setState(() {
-                        deliveryMethodNotifier.value = v;
-                      });
-                    },
-                    key: _orderFormKey,
-                    onSubmit: (method, name, phoneNumber, address, comment) {
-                      // Вычисляем общую сумму заказа
-                      int totalPrice = _getTotalSum();
-                    },
-                  ),
-                ],
-              ),
-            ),
+  void _processOrder(DeliveryMethod method, String? name, String? phoneNumber,
+      String? address, String? comment) async {
+    if (!_orderFormKey.currentState!.validate()) {
+      return; // Если форма не валидна, прекратить выполнение
+    }
+
+    setState(() => _isProcessing = true);
+
+    final formData = _orderFormKey.currentState!.getFormData();
+
+    // Используем функцию deliveryMethodToString для получения строки
+    String deliveryMethodString = deliveryMethodToString(method);
+
+    int orderNum = await _incrementOrderNumber();
+    Order order = Order(
+      orderNumber: orderNum,
+      details: _generateOrderDetailsString(
+          orderNum, method, name, phoneNumber, address, comment),
+      totalPrice: _getTotalSum(),
+      shippingAddress: address ?? 'Не указан', // Значение по умолчанию
+      paymentMethod: deliveryMethodString, // Используем строку здесь
+      phone: phoneNumber ?? 'Не указан', // Значение по умолчанию
+      timeOrder: DateTime.now(),
     );
+
+    await _sendOrderToTelegram(order.details);
+    await OrderService.sendOrderToDatabase(order);
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => SuccessOrderPage(orderNumber: orderNum)));
+
+    setState(() => _isProcessing = false);
   }
 
   int _getTotalSum() {
-    int totalSum = 0;
-    for (int i = 0; i < cartBox.length; i++) {
-      CartItem? item = cartBox.getAt(i);
-      if (item != null) {
-        if (item.isWeightBased) {
-          totalSum += (item.price * (item.weight ?? 0) * 10)
-              .toInt(); // умножаем на 10, если цена указана за 0.1 кг
-        } else {
-          totalSum += (item.price * item.quantity);
-        }
-      }
-    }
-    log("[DEBUG]: totalSum: $totalSum");
+    int totalSum = cartBox.values.fold(
+        0,
+        (sum, item) =>
+            sum +
+            (item.isWeightBased
+                ? (item.price * item.weight! * 10).toInt()
+                : item.price * item.quantity));
     return totalSum;
   }
 
-  String _getDeliveryMessage(int totalSum, DeliveryMethod deliveryMethod) {
-    if (deliveryMethod == DeliveryMethod.pickup) {
-      return "Будем ждать Вас!";
-    } else if (totalSum >= 800) {
-      return "Доставка будет бесплатной";
-    } else {
-      return "Доставка по городу 100 руб";
-    }
-  }
-
-  Future<int> incrementOrderNumber() async {
+  Future<int> _incrementOrderNumber() async {
     var orderNumberBox = await Hive.openBox<int>('orderNumberBox');
-
-    // Если ячейка с номером заказа пуста, инициализируем её номером 1
-    if (orderNumberBox.isEmpty) {
-      await orderNumberBox.put('orderNumber', 1);
-      return 1;
-    } else {
-      int currentOrderNumber = orderNumberBox.get('orderNumber')!;
-      await orderNumberBox.put('orderNumber', currentOrderNumber + 1);
-      return currentOrderNumber + 1;
-    }
+    int currentOrderNumber =
+        orderNumberBox.get('orderNumber', defaultValue: 0)!;
+    await orderNumberBox.put('orderNumber', currentOrderNumber + 1);
+    return currentOrderNumber + 1;
   }
 
-  Future<Order> generateOrderDetails(int orderNumber, String method,
-      String name, String phoneNumber, String address, String comment) async {
+  String _generateOrderDetailsString(int orderNumber, DeliveryMethod method,
+      String? name, String? phoneNumber, String? address, String? comment) {
     StringBuffer details = StringBuffer();
+    details
+      ..writeln("Заказ №$orderNumber")
+      ..writeln("Время заказа: ${TimeService.getCurrentTime()}")
+      ..writeln("Доставка: ${deliveryMethodToString(method)}")
+      ..writeln("Телефон: ${phoneNumber ?? 'Не указан'}")
+      ..writeln("Адрес: ${address ?? 'Не указан'}")
+      ..writeln("Комментарий: ${comment ?? 'Нет'}")
+      ..writeln("\nПозиции заказа:");
 
-    details.writeln("Заказ №$orderNumber");
-    details.writeln(
-        "Время заказа: ${TimeService.getCurrentTime()}"); // Добавляем время заказа
+    cartBox.values.forEach((item) {
+      String itemDetail = item.isWeightBased
+          ? "${item.title} - ${item.weight?.toStringAsFixed(2)} кг - ${(item.price * item.weight! * 10).toInt()} ₽"
+          : "${item.title} - ${item.quantity} шт. - ${item.price * item.quantity} ₽";
+      details.writeln(itemDetail);
+    });
 
-    details.writeln("Детали заказа:");
-    details.writeln("Метод: $method");
-    details.writeln("Имя: $name");
-    details.writeln("Телефон: $phoneNumber");
-    details.writeln("Адрес: $address");
-    details.writeln("Комментарий: $comment");
+    String deliveryStatus =
+        _deliveryMethodNotifier.value == DeliveryMethod.courier &&
+                _getTotalSum() >= 800
+            ? "бесплатная"
+            : "платная";
 
-    for (int i = 0; i < cartBox.length; i++) {
-      final item = cartBox.getAt(i);
-      if (item != null) {
-        if (item.isWeightBased) {
-          details.writeln(
-              "- ${item.title} (вес: ${item.weight?.toStringAsFixed(1)} кг, Цена за 0.1 кг: ${item.price} ₽)");
-        } else {
-          details.writeln(
-              "- ${item.title} (кол-во: ${item.quantity}, Цена за шт: ${item.price} ₽)");
-        }
-      }
-    }
-    details.writeln("Общий итог: ${_getTotalSum()} ₽");
+    details.writeln("\nДоставка: $deliveryStatus");
+    details.writeln("\nИтого: ${_getTotalSum()} ₽");
 
-    return Order(
-      orderNumber: orderNumber,
-      details: details.toString(),
-      totalPrice: _getTotalSum(),
-      shippingAddress: address,
-      paymentMethod: method,
-      phone: phoneNumber,
-      timeOrder: DateFormat('yyyy-MM-dd HH:mm:ss').parse(TimeService
-          .getCurrentTime()), // передаем преобразованное текущее время в параметр timeOrder
-    );
+    return details.toString();
   }
 
-  Future<void> sendOrderToTelegram(String orderDetails) async {
-    final String url =
-        'https://api.telegram.org/bot$telegramBotToken/sendMessage';
+  DeliveryMethod getDeliveryMethodFromString(String methodString) {
+    switch (methodString) {
+      case 'Самовывоз':
+        return DeliveryMethod.pickup;
+      case 'Доставка курьером':
+        return DeliveryMethod.courier;
+      default:
+        throw Exception('Неизвестный метод доставки: $methodString');
+    }
+  }
 
+  Future<void> _sendOrderToTelegram(String orderDetails) async {
     await http.post(
-      Uri.parse(url),
-      body: {
-        'chat_id': telegramChatId,
-        'text': orderDetails,
-        'text': orderDetails,
-        'parse_mode': 'Markdown',
-      },
-    );
+        Uri.parse('https://api.telegram.org/bot$telegramBotToken/sendMessage'),
+        body: {
+          'chat_id': telegramChatId,
+          'text': orderDetails,
+          'parse_mode': 'Markdown'
+        });
   }
 }

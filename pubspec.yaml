@@ -13,11 +13,11 @@ dependencies:
   shimmer: ^3.0.0
   grouped_list: ^5.1.2
   flutter_dotenv: ^5.1.0
-  flutter_blurhash: ^0.7.0
+  flutter_blurhash: ^0.8.2
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   path_provider: ^2.1.1
-  cached_network_image: ^3.2.3
+  cached_network_image: ^3.3.0
   flutter_svg: ^2.0.7
   rive: ^0.11.16
   telegram: ^0.0.3

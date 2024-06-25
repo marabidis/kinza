@@ -1,28 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_kinza/ui/widgets/my_button.dart';
-import 'package:flutter_kinza/ui/widgets/cart/cart_item_control.dart';
 import 'package:flutter_kinza/models/cart_item.dart';
-import '/models/product.dart';
 import 'package:flutter_kinza/styles/app_constants.dart';
+import 'package:flutter_kinza/ui/widgets/cart/cart_item_control.dart';
+import 'package:flutter_kinza/ui/widgets/my_button.dart';
+import 'package:flutter_kinza/models/product.dart';
 
 class ProductDetailWidget extends StatefulWidget {
   final Product product;
   final VoidCallback onAddToCart;
   final VoidCallback onCartStateChanged;
   final bool isInCart;
+  final int initialQuantity;
+  final double initialWeight;
   final ValueChanged<int> onQuantityChanged;
   final ValueChanged<double> onWeightChanged;
   final VoidCallback onItemAdded;
+  final Function(CartItem) updateCartItem;
+  final Function(String) removeCartItem;
 
   ProductDetailWidget({
     required this.product,
     required this.onAddToCart,
     required this.isInCart,
+    this.initialQuantity = 1,
+    this.initialWeight = 0.4,
     required this.onCartStateChanged,
     required this.onQuantityChanged,
     required this.onWeightChanged,
     required this.onItemAdded,
+    required this.updateCartItem,
+    required this.removeCartItem,
   });
 
   @override
@@ -31,11 +38,15 @@ class ProductDetailWidget extends StatefulWidget {
 
 class _ProductDetailWidgetState extends State<ProductDetailWidget> {
   late bool isInCart;
+  late int currentQuantity;
+  late double currentWeight;
 
   @override
   void initState() {
     super.initState();
     isInCart = widget.isInCart;
+    currentQuantity = widget.initialQuantity;
+    currentWeight = widget.initialWeight;
   }
 
   void updateCartStatus(bool newStatus) {
@@ -44,11 +55,12 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
     });
   }
 
-  Widget _buildTextWidget(String text, TextStyle style) {
-    return Padding(
-      padding: EdgeInsets.only(top: AppConstants.indent),
-      child: Text(text, style: style),
-    );
+  void updateCartItemInCart(CartItem updatedItem) {
+    widget.updateCartItem(updatedItem);
+  }
+
+  void removeItemFromCart(String itemId) {
+    widget.removeCartItem(itemId);
   }
 
   @override
@@ -61,15 +73,7 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppConstants.baseRadius),
-              child: CachedNetworkImage(
-                imageUrl: widget.product.imageUrl?.mediumUrl ??
-                    'placeholder_image_url',
-                placeholder: (context, url) => CircularProgressIndicator(),
-                errorWidget: (context, url, error) => Icon(Icons.error),
-              ),
-            ),
+            _buildImage(),
             _buildTextWidget(widget.product.title, AppStyles.titleTextStyle),
             _buildTextWidget("Вес: ${widget.product.weight ?? 'N/A'} кг",
                 AppStyles.bodyTextStyle),
@@ -77,24 +81,59 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
                 widget.product.description ?? 'Описание отсутствует',
                 AppStyles.bodyTextStyle),
             SizedBox(height: AppConstants.indent),
-            buildButtonsSection(isWeightBased),
+            _buildButtonsSection(isWeightBased),
           ],
         ),
       ),
     );
   }
 
-  Widget buildButtonsSection(bool isWeightBased) {
+  Widget _buildImage() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppConstants.baseRadius),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AspectRatio(
+            aspectRatio: 1, // Соотношение сторон изображения
+            child: Container(
+              color:
+                  Colors.grey[200], // Цвет фона, пока изображение не загружено
+            ),
+          ),
+          Positioned.fill(
+            child: Image.network(
+              widget.product.imageUrl?.mediumUrl ?? 'placeholder_image_url',
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(child: CircularProgressIndicator());
+              },
+              errorBuilder: (context, error, stackTrace) => Icon(Icons.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextWidget(String text, TextStyle style) {
+    return Padding(
+      padding: EdgeInsets.only(top: AppConstants.indent),
+      child: Text(text, style: style),
+    );
+  }
+
+  Widget _buildButtonsSection(bool isWeightBased) {
     final CartItem cartItem = CartItem(
       id: widget.product.id.toString(),
       title: widget.product.title,
       price: widget.product.price,
-      quantity: isWeightBased ? 0 : 1,
-      weight: isWeightBased ? widget.product.weight : null,
+      quantity: currentQuantity,
+      weight: currentWeight,
       thumbnailUrl: widget.product.imageUrl?.url,
       isWeightBased: isWeightBased,
-      minimumWeight: isWeightBased ? widget.product.minimumWeight : null,
-      unit: isWeightBased ? 'г' : null,
+      minimumWeight: widget.product.minimumWeight,
     );
 
     return Row(
@@ -104,8 +143,7 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
             buttonText: isInCart ? "В корзине" : "В корзину",
             onPressed: () {
               widget.onAddToCart();
-              updateCartStatus(
-                  true); // Обновляем состояние, когда товар добавлен в корзину
+              updateCartStatus(true);
             },
             isChecked: isInCart,
           ),
@@ -114,19 +152,27 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
         CartItemControl(
           item: cartItem,
           onQuantityChanged: (quantity) {
+            setState(() => currentQuantity = quantity);
             widget.onQuantityChanged(quantity);
-            setState(() {
-              isInCart = quantity > 0; // Изменено условие на quantity > 0
-            });
+            if (quantity > 0) {
+              updateCartItemInCart(cartItem.copyWith(quantity: quantity));
+            } else {
+              removeItemFromCart(cartItem.id);
+            }
+            updateCartStatus(quantity > 0);
           },
           onWeightChanged: (weight) {
+            setState(() => currentWeight = weight);
             widget.onWeightChanged(weight);
-            setState(() {
-              isInCart = weight > 0.0; // Изменено условие на weight > 0.0
-            });
+            if (weight > 0.0) {
+              updateCartItemInCart(cartItem.copyWith(weight: weight));
+            } else {
+              removeItemFromCart(cartItem.id);
+            }
+            updateCartStatus(weight > 0.0);
           },
           onAddToCart: widget.onAddToCart,
-          isItemInCart: widget.isInCart,
+          isItemInCart: isInCart,
           isWeightBased: isWeightBased,
         ),
       ],

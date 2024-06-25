@@ -10,6 +10,7 @@ class AppColors {
   static const Color pink = Color.fromRGBO(255, 71, 193, 1);
   static const Color orange = Color.fromRGBO(255, 105, 0, 1);
   static const Color whitegrey = Color.fromRGBO(195, 195, 195, 1);
+  static const Color lightGreyDivider = Color(0xFFE0E0E0);
 }
 
 class AppConstants {
@@ -82,5 +83,10 @@ class AppStyles {
       borderRadius: BorderRadius.circular(50),
     ),
     elevation: 0,
+  );
+
+  static final DividerThemeData dividerTheme = DividerThemeData(
+    color: AppColors.lightGreyDivider,
+    thickness: 1,
   );
 }

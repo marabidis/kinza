@@ -17,29 +17,53 @@ class CartItem {
   final int quantity;
 
   @HiveField(4)
-  final String? thumbnailUrl; // Добавьте это поле
+  final String? thumbnailUrl;
 
   @HiveField(5)
-  final double? weight; // изменено на double
+  final double? weight;
 
   @HiveField(6)
-  final double? minimumWeight; // изменено на double
+  final double? minimumWeight;
 
   @HiveField(7)
-  final bool isWeightBased; // новое свойство
+  final bool isWeightBased;
 
   @HiveField(8)
-  final String? unit; // единица измерения (например, 'г', 'кг', 'л' и т. д.)
+  final String? unit;
 
   CartItem({
     required this.id,
     required this.title,
     required this.price,
     required this.quantity,
-    required this.thumbnailUrl, // И это
+    this.thumbnailUrl,
     this.weight,
     this.minimumWeight,
-    required this.isWeightBased, // новый параметр
+    required this.isWeightBased,
     this.unit,
   });
+
+  CartItem copyWith({
+    String? id,
+    String? title,
+    int? price,
+    int? quantity,
+    String? thumbnailUrl,
+    double? weight,
+    double? minimumWeight,
+    bool? isWeightBased,
+    String? unit,
+  }) {
+    return CartItem(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      price: price ?? this.price,
+      quantity: quantity ?? this.quantity,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      weight: weight ?? this.weight,
+      minimumWeight: minimumWeight ?? this.minimumWeight,
+      isWeightBased: isWeightBased ?? this.isWeightBased,
+      unit: unit ?? this.unit,
+    );
+  }
 }

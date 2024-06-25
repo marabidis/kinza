@@ -193,6 +193,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showProductDetail(BuildContext context, Product product) {
+    CartItem? cartItem = cartBox?.get(product.id.toString());
+    int currentQuantity =
+        cartItem?.quantity ?? 1; // Если товара нет в корзине, то 1
+    double currentWeight = cartItem?.weight ?? 0.4; // Если веса нет, то 0.4
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -202,13 +207,9 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) {
         return ProductDetailWidget(
           product: product,
-          onAddToCart: () {
-            _toggleItemInCart(context, product);
-          },
+          onAddToCart: () => _toggleItemInCart(context, product),
           isInCart: isItemInCart(product),
-          onCartStateChanged: () {
-            setState(() {});
-          },
+          onCartStateChanged: () => setState(() {}),
           onQuantityChanged: (quantity) {
             if (!isItemInCart(product)) {
               _toggleItemInCart(context, product, quantity);
@@ -220,8 +221,31 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           },
           onItemAdded: () {},
+          initialQuantity: currentQuantity,
+          initialWeight: currentWeight,
+          updateCartItem: (updatedItem) =>
+              _updateCartItem(context, updatedItem),
+          removeCartItem: (itemId) => _removeCartItem(context, itemId),
         );
       },
     );
+  }
+
+// Реализация функций updateCartItem и removeCartItem
+  void _updateCartItem(BuildContext context, CartItem updatedItem) {
+    if (cartBox == null) return;
+
+    int index = cartBox!.values
+        .toList()
+        .indexWhere((item) => item.id == updatedItem.id);
+    if (index != -1) {
+      cartBox!.putAt(index, updatedItem);
+    }
+  }
+
+  void _removeCartItem(BuildContext context, String itemId) {
+    if (cartBox == null) return;
+
+    cartBox!.delete(itemId);
   }
 }

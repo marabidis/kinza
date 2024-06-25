@@ -81,13 +81,13 @@
 //         child: Column(
 //           children: [
 //             SizedBox(height: 16),
-//             ListView.separated(
+//             ListView.builder(
 //               shrinkWrap: true,
 //               physics: NeverScrollableScrollPhysics(),
 //               itemCount: cartBox.length,
-//               separatorBuilder: (_, __) => SizedBox.shrink(), // Убрана линия
 //               itemBuilder: (context, index) {
 //                 final item = cartBox.getAt(index);
+//                 final isLastItem = index == cartBox.length - 1;
 //                 return item != null
 //                     ? CartItemWidget(
 //                         item: item,
@@ -96,11 +96,12 @@
 //                             index, item.copyWith(quantity: newQuantity)),
 //                         onWeightChanged: (newWeight) => _updateCartItem(
 //                             index, item.copyWith(weight: newWeight)),
+//                         isLastItem: isLastItem, // Передаем параметр
 //                       )
 //                     : SizedBox.shrink();
 //               },
 //             ),
-//             SizedBox(height: 16),
+//             SizedBox(height: 16), // Добавьте этот отступ
 //             OrderForm(
 //               key: _orderFormKey,
 //               deliveryMethodNotifier: _deliveryMethodNotifier,
