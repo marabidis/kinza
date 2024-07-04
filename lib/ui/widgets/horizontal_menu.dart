@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_kinza/styles/app_constants.dart';
 
-class HorizontalMenu extends AppBar {
+class HorizontalMenu extends StatefulWidget implements PreferredSizeWidget {
   final Function(String) onCategoryChanged;
   final ValueNotifier<String?> activeCategoryNotifier;
 
@@ -13,31 +13,83 @@ class HorizontalMenu extends AppBar {
 
   @override
   _HorizontalMenuState createState() => _HorizontalMenuState();
+
+  @override
+  Size get preferredSize => Size.fromHeight(60);
 }
 
 class _HorizontalMenuState extends State<HorizontalMenu> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.activeCategoryNotifier.addListener(_scrollToActiveCategory);
+  }
+
+  @override
+  void dispose() {
+    widget.activeCategoryNotifier.removeListener(_scrollToActiveCategory);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToActiveCategory() {
+    final activeCategory = widget.activeCategoryNotifier.value;
+    if (activeCategory != null) {
+      final categoryIndex = _categories.indexOf(activeCategory);
+      if (categoryIndex != -1) {
+        final categoryWidth = 100.0; // Adjust as needed
+        final position = categoryIndex * categoryWidth;
+        if (position < _scrollController.offset) {
+          _scrollController.animateTo(
+            position,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        } else if (position >
+            _scrollController.offset +
+                MediaQuery.of(context).size.width -
+                categoryWidth) {
+          _scrollController.animateTo(
+            position - MediaQuery.of(context).size.width + categoryWidth,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      }
+    }
+  }
+
+  List<String> get _categories => [
+        'Пицца',
+        'Блюда на мангале',
+        'Хачапури',
+        'К блюду',
+        // Add other categories here.
+      ];
+
   @override
   Widget build(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      toolbarHeight: 60, // Увеличиваем высоту AppBar
-      titleSpacing: 0, // Убираем отступы заголовка AppBar
+      toolbarHeight: 60,
+      titleSpacing: 0,
       title: ValueListenableBuilder<String?>(
         valueListenable: widget.activeCategoryNotifier,
         builder: (context, value, child) {
           return Container(
-            height: 40, // Увеличиваем высоту контейнера
-            child: ListView(
+            height: 40,
+            child: ListView.builder(
+              controller: _scrollController,
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.zero, // Убираем отступы контейнера ListView
-              children: [
-                _menuButton('Пицца', value),
-                _menuButton('Блюда на мангале', value),
-                _menuButton('Хачапури', value),
-                _menuButton('К блюду', value),
-                // Добавьте здесь другие категории, если они есть.
-              ],
+              padding: EdgeInsets.zero,
+              itemCount: _categories.length,
+              itemBuilder: (context, index) {
+                final category = _categories[index];
+                return _menuButton(category, value);
+              },
             ),
           );
         },
@@ -62,7 +114,7 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
           ),
           padding: MaterialStateProperty.all(
             EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          ), // Увеличиваем вертикальный отступ
+          ),
           shape: MaterialStateProperty.all(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(50),

@@ -25,6 +25,8 @@ class _CartScreenState extends State<CartScreen> {
   final GlobalKey<OrderFormState> _orderFormKey = GlobalKey<OrderFormState>();
   final ValueNotifier<DeliveryMethod> _deliveryMethodNotifier =
       ValueNotifier<DeliveryMethod>(DeliveryMethod.courier);
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
 
   @override
   void initState() {
@@ -75,28 +77,22 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildCartList() {
     return SingleChildScrollView(
+      controller: _scrollController,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: AppConstants.padding),
         child: Column(
           children: [
             SizedBox(height: 16),
-            ListView.builder(
+            AnimatedList(
+              key: _listKey,
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
-              itemCount: cartBox.length,
-              itemBuilder: (context, index) {
+              initialItemCount: cartBox.length,
+              itemBuilder: (context, index, animation) {
                 final item = cartBox.getAt(index);
                 final isLastItem = index == cartBox.length - 1;
                 return item != null
-                    ? CartItemWidget(
-                        item: item,
-                        onDelete: () => _deleteItemFromCart(index),
-                        onQuantityChanged: (newQuantity) => _updateCartItem(
-                            index, item.copyWith(quantity: newQuantity)),
-                        onWeightChanged: (newWeight) => _updateCartItem(
-                            index, item.copyWith(weight: newWeight)),
-                        isLastItem: isLastItem, // Передаем параметр
-                      )
+                    ? _buildCartItem(item, index, animation, isLastItem)
                     : SizedBox.shrink();
               },
             ),
@@ -121,6 +117,65 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  Widget _buildCartItem(
+      CartItem item, int index, Animation<double> animation, bool isLastItem) {
+    return SizeTransition(
+      sizeFactor: animation,
+      child: CartItemWidget(
+        item: item,
+        onDelete: () => _deleteItemFromCart(index),
+        onQuantityChanged: (newQuantity) =>
+            _updateCartItem(index, item.copyWith(quantity: newQuantity)),
+        onWeightChanged: (newWeight) =>
+            _updateCartItem(index, item.copyWith(weight: newWeight)),
+        isLastItem: isLastItem, // Передаем параметр
+      ),
+    );
+  }
+
+  void _showDeliveryDetails(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black.withOpacity(0.8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
+      ),
+      builder: (BuildContext context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                'Условия доставки',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              _buildConditionItem(
+                  'При заказе от 800 ₽ - доставка курьером бесплатная.'),
+              Divider(color: Colors.grey),
+              _buildConditionItem(
+                  'При заказе до 800 ₽ - стоимость доставки 100 ₽.'),
+              Divider(color: Colors.grey),
+              _buildConditionItem(
+                  'Доставка осуществляется по городу ежедневно с 9:00 до 21:00.'),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildConditionItem(String condition) {
+    return Text(
+      condition,
+      style: TextStyle(color: Colors.white, fontSize: 14),
+    );
+  }
+
   Widget _buildBottomNavigationBar() {
     final totalSum = _getTotalSum();
     return cartBox.isEmpty
@@ -130,12 +185,24 @@ class _CartScreenState extends State<CartScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (_deliveryMethodNotifier.value == DeliveryMethod.courier &&
-                    totalSum >= 800)
-                  Text(
-                    'При заказе от 800 ₽ - доставка курьером бесплатная!',
-                    style: AppStyles.bodyTextStyle
-                        .copyWith(color: AppColors.green),
+                if (_deliveryMethodNotifier.value == DeliveryMethod.courier)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          totalSum >= 800
+                              ? 'Бесплатная доставка'
+                              : 'Доставка по городу от 100 ₽, до бесплатной доставки еще нужно ${800 - totalSum} ₽',
+                          style: AppStyles.bodyTextStyle
+                              .copyWith(color: AppColors.green),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.info_outline, color: AppColors.green),
+                        onPressed: () => _showDeliveryDetails(context),
+                      ),
+                    ],
                   ),
                 SizedBox(height: 8),
                 ElevatedButton(
@@ -145,6 +212,7 @@ class _CartScreenState extends State<CartScreen> {
                               totalSum < 800)
                       ? null
                       : () {
+                          _scrollToOrderForm();
                           if (_orderFormKey.currentState!.validate()) {
                             final formData =
                                 _orderFormKey.currentState!.getFormData();
@@ -182,11 +250,28 @@ class _CartScreenState extends State<CartScreen> {
           );
   }
 
+  void _scrollToOrderForm() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(seconds: 1),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
   void _deleteItemFromCart(int index) {
-    if (index >= 0 && index < cartBox.length) {
+    final item = cartBox.getAt(index);
+    if (item != null) {
       cartBox.deleteAt(index);
-      setState(() {});
+      _listKey.currentState?.removeItem(
+        index,
+        (context, animation) =>
+            _buildCartItem(item, index, animation, index == cartBox.length - 1),
+        duration: Duration(milliseconds: 300),
+      );
     }
+    setState(() {});
   }
 
   void _updateCartItem(int index, CartItem updatedItem) {

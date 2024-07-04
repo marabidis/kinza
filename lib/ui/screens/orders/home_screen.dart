@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
-import '../../widgets/horizontal_menu.dart';
-import '../../../models/CatalogFood.dart';
-import '../../widgets/foodCatalog.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
+import 'package:flutter_kinza/styles/app_constants.dart';
+import 'package:flutter_kinza/models/product.dart';
+import 'package:flutter_kinza/ui/widgets/my_button.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../../models/cart_item.dart';
-import 'dart:developer';
-import '../cart/cart_screen.dart';
-import '../../widgets/cart/floating_cart_button.dart';
-import 'product/product_detail_widget.dart';
-import '../../../services/api_client.dart';
-import '../../../models/product.dart';
-import '../../../services/utils.dart';
+import 'package:flutter_kinza/models/cart_item.dart';
+import 'package:flutter_kinza/services/api_client.dart';
+import 'package:flutter_kinza/ui/widgets/cart/floating_cart_button.dart';
+import 'package:flutter_kinza/ui/screens/cart/cart_screen.dart';
+import 'package:flutter_kinza/ui/widgets/horizontal_menu.dart';
+import 'package:flutter_kinza/services/utils.dart';
+import 'package:flutter_kinza/ui/screens/orders/product/product_detail_widget.dart';
+import '../../../models/CatalogFood.dart';
+import '../../widgets/foodCatalog.dart';
 
 const _ITEM_HEIGHT = 145.0;
 
@@ -26,7 +30,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final CatalogFoodRepository nameCategory;
-  late ValueNotifier<String?> activeCategoryNotifier; // Объявление переменной
+  late ValueNotifier<String?> activeCategoryNotifier;
   bool _isLoading = true;
   List<Product> _data = [];
   ScrollController _controller = ScrollController();
@@ -38,9 +42,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     nameCategory = CatalogFoodRepository(widget.apiClient);
-    activeCategoryNotifier = ValueNotifier<String?>(null); // Инициализация
+    activeCategoryNotifier = ValueNotifier<String?>(null);
     _loadCartData();
     _fetchData();
+    _controller.addListener(_onScroll);
   }
 
   void _loadCartData() async {
@@ -94,6 +99,21 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _onScroll() {
+    double offset = _controller.offset;
+    double itemHeight = _ITEM_HEIGHT;
+
+    for (var category in categoryIndexes.keys) {
+      int index = categoryIndexes[category]!;
+      double itemOffset = index * itemHeight;
+
+      if (offset >= itemOffset && offset < itemOffset + itemHeight) {
+        activeCategoryNotifier.value = category;
+        break;
+      }
+    }
+  }
+
   void scrollToCategory(String category) {
     int? index = categoryIndexes[category];
     if (index != null) {
@@ -104,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _controller.removeListener(_onScroll);
     _controller.dispose();
     super.dispose();
   }
@@ -194,9 +215,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showProductDetail(BuildContext context, Product product) {
     CartItem? cartItem = cartBox?.get(product.id.toString());
-    int currentQuantity =
-        cartItem?.quantity ?? 1; // Если товара нет в корзине, то 1
-    double currentWeight = cartItem?.weight ?? 0.4; // Если веса нет, то 0.4
+    int currentQuantity = cartItem?.quantity ?? 1;
+    double currentWeight = cartItem?.weight ?? 0.4;
 
     showModalBottomSheet(
       context: context,
@@ -231,7 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-// Реализация функций updateCartItem и removeCartItem
   void _updateCartItem(BuildContext context, CartItem updatedItem) {
     if (cartBox == null) return;
 

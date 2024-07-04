@@ -4,6 +4,7 @@ import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:flutter_kinza/styles/app_constants.dart';
 import 'package:flutter_kinza/models/product.dart';
 import 'package:flutter_kinza/ui/widgets/my_button.dart';
+import 'package:shimmer/shimmer.dart'; // Импортируем пакет shimmer
 
 class CatalogItemWidget extends StatelessWidget {
   final bool isChecked;
@@ -26,7 +27,15 @@ class CatalogItemWidget extends StatelessWidget {
             CachedNetworkImage(
               imageUrl:
                   product.imageUrl?.thumbnailUrl ?? 'placeholder_image_url',
-              placeholder: (context, url) => BlurHash(hash: product.blurHash),
+              placeholder: (context, url) => Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Container(
+                  width: AppConstants.imageSize,
+                  height: AppConstants.imageSize,
+                  color: Colors.white,
+                ),
+              ),
               errorWidget: (context, url, error) => Icon(Icons.error),
               fit: BoxFit.cover,
               width: AppConstants.imageSize,
@@ -99,7 +108,6 @@ class CatalogItemWidget extends StatelessWidget {
                 buttonText: '${product.price}₽',
                 onPressed: onAddToCart,
               ),
-              // Убран вызов _buildMarkWidget здесь, чтобы избежать дублирования
             ],
           ),
         ),

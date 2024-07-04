@@ -127,6 +127,8 @@ class OrderFormState extends State<OrderForm>
               Tab(text: 'Самовывоз'),
             ],
             indicatorColor: Colors.transparent,
+            dividerHeight:
+                0, // fixed tab bar default indicator size. Author: Dima
           ),
         ),
         Container(
