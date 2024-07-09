@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
-import 'package:flutter_kinza/models/product.dart';
-import 'package:flutter_kinza/ui/widgets/my_button.dart';
+import 'package:kinza/styles/app_constants.dart';
+import 'package:kinza/models/product.dart';
+import 'package:kinza/ui/widgets/my_button.dart';
 import 'package:shimmer/shimmer.dart'; // Импортируем пакет shimmer
 
 class CatalogItemWidget extends StatelessWidget {

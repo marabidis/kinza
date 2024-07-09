@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
+import 'package:kinza/styles/app_constants.dart';
 
 class FloatingCartButton extends StatelessWidget {
   final int itemCount;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_kinza/models/cart_item.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
-import 'package:flutter_kinza/ui/widgets/cart/cart_item_control.dart';
+import 'package:kinza/models/cart_item.dart';
+import 'package:kinza/styles/app_constants.dart';
+import 'package:kinza/ui/widgets/cart/cart_item_control.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 

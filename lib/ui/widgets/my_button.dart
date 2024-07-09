@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
+import 'package:kinza/styles/app_constants.dart';
 
 class MyButton extends StatefulWidget {
   final bool isChecked;

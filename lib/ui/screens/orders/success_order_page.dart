@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
+import 'package:kinza/styles/app_constants.dart';
 import 'package:flutter/services.dart';
 
 class SuccessOrderPage extends StatelessWidget {

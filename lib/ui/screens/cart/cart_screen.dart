@@ -1,18 +1,18 @@
-import 'package:flutter_kinza/styles/app_constants.dart';
-import 'package:flutter_kinza/ui/widgets/cart/cart_item_widget.dart';
+import 'package:kinza/styles/app_constants.dart';
+import 'package:kinza/ui/widgets/cart/cart_item_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:flutter_kinza/models/cart_item.dart';
+import 'package:kinza/models/cart_item.dart';
 import '../orders/success_order_page.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_kinza/services/order_service.dart';
+import 'package:kinza/services/order_service.dart';
 import '/forms/OrderForm.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_kinza/config.dart';
-import 'package:flutter_kinza/services/time_service.dart';
+import 'package:kinza/config.dart';
+import 'package:kinza/services/time_service.dart';
 
 class CartScreen extends StatefulWidget {
   @override
