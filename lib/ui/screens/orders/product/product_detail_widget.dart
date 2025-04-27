@@ -68,15 +68,20 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
     final bool isWeightBased = widget.product.isWeightBased ?? false;
 
     return SingleChildScrollView(
-      child: Container(
-        padding: EdgeInsets.all(AppConstants.padding),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppConstants.padding,
+          vertical: AppConstants.padding,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildImage(),
+            SizedBox(height: AppConstants.indent),
             _buildTextWidget(widget.product.title, AppStyles.titleTextStyle),
-            _buildTextWidget("Вес: ${widget.product.weight ?? 'N/A'} кг",
-                AppStyles.bodyTextStyle),
+            if (widget.product.weight != null)
+              _buildTextWidget(
+                  "Вес: ${widget.product.weight} кг", AppStyles.bodyTextStyle),
             _buildTextWidget(
                 widget.product.description ?? 'Описание отсутствует',
                 AppStyles.bodyTextStyle),
@@ -136,46 +141,64 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
       minimumWeight: widget.product.minimumWeight,
     );
 
-    return Row(
-      children: [
-        Expanded(
-          child: MyButton(
-            buttonText: isInCart ? "В корзине" : "В корзину",
-            onPressed: () {
-              widget.onAddToCart();
-              updateCartStatus(true);
-            },
-            isChecked: isInCart,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0), // Добавляем отступ снизу
+      child: Row(
+        children: [
+          Expanded(
+            child: MyButton(
+              buttonText: isInCart ? "В корзине" : "В корзину",
+              onPressed: () {
+                if (!isInCart) {
+                  final CartItem cartItem = CartItem(
+                    id: widget.product.id.toString(),
+                    title: widget.product.title,
+                    price: widget.product.price,
+                    quantity: currentQuantity,
+                    weight: currentWeight,
+                    thumbnailUrl: widget.product.imageUrl?.url,
+                    isWeightBased: widget.product.isWeightBased ?? false,
+                    minimumWeight: widget.product.minimumWeight,
+                  );
+                  widget.updateCartItem(cartItem);
+                  widget.onAddToCart();
+                  widget.onItemAdded();
+                }
+                updateCartStatus(true);
+              },
+              isChecked: isInCart,
+            ),
           ),
-        ),
-        SizedBox(width: AppConstants.marginSmall),
-        CartItemControl(
-          item: cartItem,
-          onQuantityChanged: (quantity) {
-            setState(() => currentQuantity = quantity);
-            widget.onQuantityChanged(quantity);
-            if (quantity > 0) {
-              updateCartItemInCart(cartItem.copyWith(quantity: quantity));
-            } else {
-              removeItemFromCart(cartItem.id);
-            }
-            updateCartStatus(quantity > 0);
-          },
-          onWeightChanged: (weight) {
-            setState(() => currentWeight = weight);
-            widget.onWeightChanged(weight);
-            if (weight > 0.0) {
-              updateCartItemInCart(cartItem.copyWith(weight: weight));
-            } else {
-              removeItemFromCart(cartItem.id);
-            }
-            updateCartStatus(weight > 0.0);
-          },
-          onAddToCart: widget.onAddToCart,
-          isItemInCart: isInCart,
-          isWeightBased: isWeightBased,
-        ),
-      ],
+          SizedBox(width: AppConstants.marginSmall),
+          CartItemControl(
+            item: cartItem,
+            onQuantityChanged: (quantity) {
+              setState(() => currentQuantity = quantity);
+              widget.onQuantityChanged(quantity);
+              if (quantity > 0) {
+                updateCartItemInCart(cartItem.copyWith(quantity: quantity));
+              } else {
+                removeItemFromCart(cartItem.id);
+                updateCartStatus(false);
+              }
+            },
+            onWeightChanged: (weight) {
+              setState(() => currentWeight = weight);
+              widget.onWeightChanged(weight);
+              if (weight > 0.0) {
+                updateCartItemInCart(cartItem.copyWith(weight: weight));
+                updateCartStatus(true);
+              } else {
+                removeItemFromCart(cartItem.id);
+                updateCartStatus(false);
+              }
+            },
+            onAddToCart: widget.onAddToCart,
+            isItemInCart: isInCart,
+            isWeightBased: isWeightBased,
+          ),
+        ],
+      ),
     );
   }
 }

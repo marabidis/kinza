@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_kinza/styles/app_constants.dart';
 import 'package:flutter_kinza/ui/widgets/cart/cart_item_widget.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter_kinza/ui/widgets/cart/empty_cart_screen.dart';
 import 'package:hive/hive.dart';
 import 'package:flutter_kinza/models/cart_item.dart';
 import '../orders/success_order_page.dart';
@@ -44,34 +46,8 @@ class _CartScreenState extends State<CartScreen> {
         iconTheme: IconThemeData(color: AppColors.black),
         elevation: 0.0,
       ),
-      body: cartBox.isEmpty ? _buildEmptyCart() : _buildCartList(),
+      body: cartBox.isEmpty ? EmptyCartScreen() : _buildCartList(),
       bottomNavigationBar: _buildBottomNavigationBar(),
-    );
-  }
-
-  Widget _buildEmptyCart() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Image.asset('assets/cat.png', height: 150),
-          SizedBox(height: 20),
-          Text("Пока, тут пусто!", style: AppStyles.subtitleTextStyle),
-          SizedBox(height: 10),
-          Text(
-              "Ваша корзина пуста, перейдите по кнопке в меню и выберите понравившийся товар.",
-              style: AppStyles.bodyTextStyle,
-              textAlign: TextAlign.center),
-          SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () =>
-                Navigator.popUntil(context, (route) => route.isFirst),
-            child: Text("Перейти в меню", style: AppStyles.buttonTextStyle),
-            style: AppStyles.elevatedButtonStyle,
-          ),
-        ],
-      ),
     );
   }
 
@@ -96,7 +72,7 @@ class _CartScreenState extends State<CartScreen> {
                     : SizedBox.shrink();
               },
             ),
-            SizedBox(height: 16), // Добавьте этот отступ
+            SizedBox(height: 16),
             OrderForm(
               key: _orderFormKey,
               deliveryMethodNotifier: _deliveryMethodNotifier,
@@ -108,7 +84,7 @@ class _CartScreenState extends State<CartScreen> {
                   _processOrder(method, name, phoneNumber, address, comment);
                 }
               },
-              totalPrice: _getTotalSum(), // Передаем общую сумму заказа
+              totalPrice: _getTotalSum(),
             ),
             SizedBox(height: 16),
           ],
@@ -128,7 +104,7 @@ class _CartScreenState extends State<CartScreen> {
             _updateCartItem(index, item.copyWith(quantity: newQuantity)),
         onWeightChanged: (newWeight) =>
             _updateCartItem(index, item.copyWith(weight: newWeight)),
-        isLastItem: isLastItem, // Передаем параметр
+        isLastItem: isLastItem,
       ),
     );
   }
@@ -245,6 +221,7 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                   ),
                 ),
+                SizedBox(height: 16), // Добавлен нижний отступ
               ],
             ),
           );
@@ -307,9 +284,10 @@ class _CartScreenState extends State<CartScreen> {
     await _sendOrderToTelegram(order.details);
     await OrderService.sendOrderToDatabase(order);
     Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => SuccessOrderPage(orderNumber: orderNum)));
+      context,
+      MaterialPageRoute(
+          builder: (context) => SuccessOrderPage(orderNumber: orderNum)),
+    );
 
     setState(() => _isProcessing = false);
   }

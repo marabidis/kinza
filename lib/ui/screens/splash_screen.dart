@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'orders/home_screen.dart'; // импортируйте свой файл с HomeScreen
 import 'package:flutter_svg/flutter_svg.dart';
-//import 'package:rive/rive.dart';
-import 'package:flutter_svg/svg.dart';
 import '/services/api_client.dart';
 
 class SplashScreen extends StatefulWidget {
   final ApiClient apiClient;
 
-  SplashScreen({required this.apiClient});
+  const SplashScreen({Key? key, required this.apiClient}) : super(key: key);
 
   @override
   _SplashScreenState createState() => _SplashScreenState();
@@ -16,6 +14,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   late Future<void> _loadingData;
+  bool _hasNavigated = false; // Флаг для предотвращения повторной навигации
 
   @override
   void initState() {
@@ -25,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _loadData() async {
     // Здесь ваш код для загрузки данных...
-    await Future.delayed(Duration(seconds: 2)); // Имитация задержки
+    await Future.delayed(const Duration(seconds: 2)); // Имитация задержки
   }
 
   @override
@@ -34,57 +33,87 @@ class _SplashScreenState extends State<SplashScreen> {
       future: _loadingData,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          WidgetsBinding.instance!.addPostFrameCallback((_) {
+          // После загрузки данных выполняем навигацию
+          WidgetsBinding.instance.addPostFrameCallback((_) {
             _navigateToHome();
           });
-          return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SvgPicture.asset(
-                    'assets/logo_kinza.svg',
-                    height: 100,
-                  ),
-                  SizedBox(height: 20),
-                  Text("Сейчас будет вкусно!"),
-                ],
-              ),
-            ),
-          );
+          return _buildSplashScreen();
         } else if (snapshot.hasError) {
-          // Добавленная проверка на ошибку
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else {
-          // Данные еще загружаются
+          // Обработка ошибки с кнопкой для повторной попытки загрузки данных
           return Scaffold(
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/logo_kinza.svg',
-                    height: 100,
+                  Text('Ошибка: ${snapshot.error}'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _loadingData = _loadData();
+                      });
+                    },
+                    child: const Text('Повторить попытку'),
                   ),
-                  SizedBox(height: 20),
-                  CircularProgressIndicator(), // Индикатор загрузки
                 ],
               ),
             ),
           );
+        } else {
+          // Пока данные загружаются, показываем экран загрузки
+          return _buildLoadingScreen();
         }
       },
     );
   }
 
-  _navigateToHome() {
-    print(
-        'Navigating to home...'); // Эта строка будет печатать сообщение в консоль
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => HomeScreen(apiClient: widget.apiClient),
+  Widget _buildSplashScreen() {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              'assets/logo_kinza.svg',
+              height: 100,
+            ),
+            const SizedBox(height: 20),
+            const Text("Сейчас будет вкусно!"),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              'assets/logo_kinza.svg',
+              height: 100,
+            ),
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToHome() {
+    if (!_hasNavigated) {
+      _hasNavigated = true;
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(apiClient: widget.apiClient),
+          ),
+        );
+      }
+    }
   }
 }

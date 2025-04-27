@@ -17,41 +17,49 @@ class FloatingCartButton extends StatelessWidget {
       onPressed: onPressed,
       backgroundColor: AppColors.green,
       child: Stack(
+        clipBehavior: Clip.none,
         children: <Widget>[
-          SvgPicture.asset(
-            'assets/shopping_cart.svg',
-            fit: BoxFit.contain,
+          Center(
+            child: SvgPicture.asset(
+              'assets/shopping_cart.svg',
+              fit: BoxFit.contain,
+            ),
           ),
-          Positioned(
-            top: 0,
-            right: 0,
-            child: AnimatedSwitcher(
-              duration: Duration(milliseconds: 300),
-              transitionBuilder: (Widget child, Animation<double> animation) {
-                return ScaleTransition(scale: animation, child: child);
-              },
-              child: Container(
-                key: ValueKey<int>(itemCount),
-                padding: EdgeInsets.all(8), // Уменьшенный padding
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.red,
-                ),
-                constraints: BoxConstraints(
-                  minWidth: 12, // Минимальный размер, соответствующий тексту
-                  minHeight: 12,
-                ),
-                child: Text(
-                  '$itemCount',
-                  style: TextStyle(
-                    color: AppColors.white,
-                    fontSize: 12, // Уменьшенный размер шрифта
+          if (itemCount > 0)
+            Positioned(
+              top: -6,
+              right: -6,
+              child: AnimatedSwitcher(
+                duration: Duration(milliseconds: 300),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return ScaleTransition(scale: animation, child: child);
+                },
+                child: Container(
+                  key: ValueKey<int>(itemCount),
+                  padding: EdgeInsets.all(
+                      6), // Увеличенный padding для улучшенной видимости
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.red,
                   ),
-                  textAlign: TextAlign.center,
+                  constraints: BoxConstraints(
+                    minWidth:
+                        20, // Увеличенный минимальный размер для лучшей видимости
+                    minHeight: 20,
+                  ),
+                  child: Text(
+                    '$itemCount',
+                    style: TextStyle(
+                      color: AppColors.white,
+                      fontSize:
+                          12, // Увеличенный размер шрифта для улучшенной читабельности
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

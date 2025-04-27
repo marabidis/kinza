@@ -41,22 +41,26 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
       if (categoryIndex != -1) {
         final categoryWidth = 100.0; // Adjust as needed
         final position = categoryIndex * categoryWidth;
+        final screenWidth = MediaQuery.of(context).size.width;
+        final maxScrollExtent = _scrollController.position.maxScrollExtent;
+
+        double targetPosition;
         if (position < _scrollController.offset) {
-          _scrollController.animateTo(
-            position,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
+          targetPosition = position;
         } else if (position >
-            _scrollController.offset +
-                MediaQuery.of(context).size.width -
-                categoryWidth) {
-          _scrollController.animateTo(
-            position - MediaQuery.of(context).size.width + categoryWidth,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
+            _scrollController.offset + screenWidth - categoryWidth) {
+          targetPosition = position - screenWidth + categoryWidth;
+        } else {
+          return;
         }
+
+        targetPosition = targetPosition.clamp(0.0, maxScrollExtent);
+
+        _scrollController.animateTo(
+          targetPosition,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
       }
     }
   }
@@ -79,12 +83,12 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
       title: ValueListenableBuilder<String?>(
         valueListenable: widget.activeCategoryNotifier,
         builder: (context, value, child) {
-          return Container(
+          return SizedBox(
             height: 40,
             child: ListView.builder(
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.zero,
+              padding: EdgeInsets.symmetric(horizontal: 8),
               itemCount: _categories.length,
               itemBuilder: (context, index) {
                 final category = _categories[index];
@@ -99,11 +103,13 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
 
   Widget _menuButton(String category, String? selectedCategory) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4),
+      padding: EdgeInsets.symmetric(horizontal: 6),
       child: ElevatedButton(
         onPressed: () {
-          widget.activeCategoryNotifier.value = category;
-          widget.onCategoryChanged(category);
+          if (widget.activeCategoryNotifier.value != category) {
+            widget.activeCategoryNotifier.value = category;
+            widget.onCategoryChanged(category);
+          }
         },
         style: ButtonStyle(
           elevation: MaterialStateProperty.all(0.0),
@@ -121,12 +127,15 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
             ),
           ),
         ),
-        child: Center(
-          child: Text(
-            category,
-            style: AppStyles.buttonTextStyle.copyWith(fontSize: 14),
-            textAlign: TextAlign.center,
+        child: Text(
+          category,
+          style: AppStyles.buttonTextStyle.copyWith(
+            fontSize: 14,
+            color: selectedCategory == category
+                ? AppColors.white
+                : AppColors.black,
           ),
+          textAlign: TextAlign.center,
         ),
       ),
     );

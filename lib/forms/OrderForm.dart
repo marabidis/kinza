@@ -19,14 +19,14 @@ class OrderForm extends StatefulWidget {
   final Function(DeliveryMethod, String?, String?, String?, String?) onSubmit;
   final ValueNotifier<DeliveryMethod> deliveryMethodNotifier;
   final Function(DeliveryMethod value) updateDelivery;
-  final int totalPrice; // Добавлено поле для общей суммы заказа
+  final int totalPrice;
 
   OrderForm({
     Key? key,
     required this.onSubmit,
     required this.updateDelivery,
     required this.deliveryMethodNotifier,
-    required this.totalPrice, // Передаем общую сумму заказа
+    required this.totalPrice,
   }) : super(key: key);
 
   @override
@@ -51,20 +51,16 @@ class OrderFormState extends State<OrderForm>
   }
 
   void _onTabChanged() {
-    if (_tabController.indexIsChanging) {
-      setState(() {
-        widget.deliveryMethodNotifier.value = _tabController.index == 0
-            ? DeliveryMethod.courier
-            : DeliveryMethod.pickup;
-        widget.updateDelivery(widget.deliveryMethodNotifier.value);
-      });
-    }
+    setState(() {
+      widget.deliveryMethodNotifier.value = _tabController.index == 0
+          ? DeliveryMethod.courier
+          : DeliveryMethod.pickup;
+      widget.updateDelivery(widget.deliveryMethodNotifier.value);
+      HapticFeedback.mediumImpact();
+    });
   }
 
   bool isNumeric(String s) {
-    if (s == null) {
-      return false;
-    }
     return double.tryParse(s) != null;
   }
 
@@ -72,7 +68,7 @@ class OrderFormState extends State<OrderForm>
     var text = phoneNumberController.text;
 
     if (text.startsWith("8")) {
-      phoneNumberController.text = "+7${text.substring(1)}";
+      phoneNumberController.text = "+7\${text.substring(1)}";
       phoneNumberController.selection = TextSelection.fromPosition(
           TextPosition(offset: phoneNumberController.text.length));
     }
@@ -120,32 +116,30 @@ class OrderFormState extends State<OrderForm>
                 TextStyle(color: AppColors.black, fontWeight: FontWeight.bold),
             unselectedLabelStyle: TextStyle(color: AppColors.black),
             indicatorSize: TabBarIndicatorSize.tab,
-            overlayColor: MaterialStateProperty.all(
-                Colors.transparent), // Убираем фоновый цвет при клике
+            overlayColor: MaterialStateProperty.all(Colors.transparent),
             tabs: [
               Tab(text: 'Доставка курьером'),
               Tab(text: 'Самовывоз'),
             ],
             indicatorColor: Colors.transparent,
-            dividerHeight:
-                0, // fixed tab bar default indicator size. Author: Dima
+            dividerHeight: 0,
           ),
         ),
         Container(
           height: 0.5,
-          color: Colors.transparent, // Делаем линию под табами прозрачной
+          color: Colors.transparent,
         ),
         SizedBox(height: 16),
         Form(
           key: _formKey,
           child: Column(
             children: [
-              _buildTextField(
+              _buildStyledTextField(
                 controller: nameController,
                 labelText: "Имя",
                 validator: (value) => value!.isEmpty ? "Введите имя" : null,
               ),
-              _buildTextField(
+              _buildStyledTextField(
                 controller: phoneNumberController,
                 labelText: "Номер телефона",
                 keyboardType: TextInputType.number,
@@ -160,12 +154,12 @@ class OrderFormState extends State<OrderForm>
                 ],
               ),
               if (widget.deliveryMethodNotifier.value == DeliveryMethod.courier)
-                _buildTextField(
+                _buildStyledTextField(
                   controller: addressController,
                   labelText: "Адрес доставки",
                   validator: (value) => value!.isEmpty ? "Введите адрес" : null,
                 ),
-              _buildTextField(
+              _buildStyledTextField(
                 controller: commentController,
                 labelText: "Комментарий к заказу",
               ),
@@ -177,7 +171,7 @@ class OrderFormState extends State<OrderForm>
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildStyledTextField({
     required TextEditingController controller,
     required String labelText,
     TextInputType? keyboardType,
@@ -186,32 +180,62 @@ class OrderFormState extends State<OrderForm>
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 5.0),
-      child: TextFormField(
-        controller: controller,
-        onChanged: (value) {
-          HapticFeedback.selectionClick();
-          _formKey.currentState?.validate();
-        },
-        decoration: InputDecoration(
-          labelText: labelText,
-          labelStyle: TextStyle(color: AppColors.black),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          border: UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey),
-          ),
-          enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey),
-          ),
-          focusedBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: AppColors.black),
-          ),
-          disabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey),
-          ),
+      child: Focus(
+        child: Builder(
+          builder: (context) {
+            final hasFocus = Focus.of(context).hasFocus;
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                return SizedBox(
+                  width:
+                      constraints.maxWidth, // Используем всю доступную ширину
+                  height: 44, // Задаем фиксированную высоту
+                  child: TextFormField(
+                    controller: controller,
+                    onChanged: (value) {
+                      HapticFeedback.selectionClick();
+                      _formKey.currentState?.validate();
+                    },
+                    decoration: InputDecoration(
+                      labelText: labelText,
+                      labelStyle: TextStyle(color: Colors.black),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide(
+                            color: hasFocus
+                                ? Color(0xFF4141E7)
+                                : Color(0xFFF4F6F9),
+                            width: 2),
+                      ),
+                      filled: true,
+                      fillColor: Color(0xFFF4F6F9),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide:
+                            BorderSide(color: Color(0xFFF4F6F9), width: 2),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide:
+                            BorderSide(color: Color(0xFF4141E7), width: 2),
+                      ),
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide:
+                            BorderSide(color: Color(0xFFF4F6F9), width: 2),
+                      ),
+                    ),
+                    keyboardType: keyboardType,
+                    validator: validator,
+                    inputFormatters: inputFormatters,
+                  ),
+                );
+              },
+            );
+          },
         ),
-        keyboardType: keyboardType,
-        validator: validator,
-        inputFormatters: inputFormatters,
       ),
     );
   }

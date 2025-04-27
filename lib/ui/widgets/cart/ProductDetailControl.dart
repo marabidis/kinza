@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../models/cart_item.dart';
 
-class CartItemControl extends StatefulWidget {
+class ProductDetailControl extends StatefulWidget {
   final CartItem item;
   final ValueChanged<int> onQuantityChanged;
   final ValueChanged<double> onWeightChanged;
@@ -13,7 +13,7 @@ class CartItemControl extends StatefulWidget {
   final double maxWeight;
   final bool isWeightBased;
 
-  CartItemControl({
+  ProductDetailControl({
     required this.item,
     required this.onQuantityChanged,
     required this.onWeightChanged,
@@ -26,10 +26,10 @@ class CartItemControl extends StatefulWidget {
   });
 
   @override
-  _CartItemControlState createState() => _CartItemControlState();
+  _ProductDetailControlState createState() => _ProductDetailControlState();
 }
 
-class _CartItemControlState extends State<CartItemControl> {
+class _ProductDetailControlState extends State<ProductDetailControl> {
   int _quantity = 0;
   double _weight = 0;
 
@@ -156,7 +156,7 @@ class _CartItemControlState extends State<CartItemControl> {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           padding: EdgeInsets.all(0),
-          primary: Color.fromRGBO(103, 118, 140, 0.1),
+          primary: Colors.blue, // Измененный цвет для карточки товара
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -169,7 +169,7 @@ class _CartItemControlState extends State<CartItemControl> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Color.fromRGBO(103, 118, 140, 1),
+              color: Colors.white, // Измененный цвет текста
             ),
           ),
         ),
