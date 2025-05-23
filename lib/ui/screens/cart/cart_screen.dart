@@ -11,8 +11,7 @@ import 'package:flutter_kinza/services/order_service.dart';
 import '/forms/OrderForm.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:flutter/services.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:flutter_kinza/config.dart';
 import 'package:flutter_kinza/services/time_service.dart';
 
@@ -38,15 +37,20 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEmpty = cartBox.isEmpty;
+
     return Scaffold(
+      backgroundColor: Color(0xFFF9F9FB),
       appBar: AppBar(
-        title: Text("Ваш заказ",
-            style: AppStyles.titleTextStyle.copyWith(color: AppColors.black)),
+        title: Text(
+          "Ваш заказ",
+          style: AppStyles.titleTextStyle.copyWith(color: AppColors.black),
+        ),
         backgroundColor: Colors.white,
         iconTheme: IconThemeData(color: AppColors.black),
         elevation: 0.0,
       ),
-      body: cartBox.isEmpty ? EmptyCartScreen() : _buildCartList(),
+      body: isEmpty ? EmptyCartScreen() : _buildCartList(),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
@@ -54,12 +58,13 @@ class _CartScreenState extends State<CartScreen> {
   Widget _buildCartList() {
     return SingleChildScrollView(
       controller: _scrollController,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppConstants.padding),
-        child: Column(
-          children: [
-            SizedBox(height: 16),
-            AnimatedList(
+      padding: EdgeInsets.only(bottom: 8),
+      child: Column(
+        children: [
+          SizedBox(height: 18),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppConstants.padding),
+            child: AnimatedList(
               key: _listKey,
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
@@ -72,8 +77,11 @@ class _CartScreenState extends State<CartScreen> {
                     : SizedBox.shrink();
               },
             ),
-            SizedBox(height: 16),
-            OrderForm(
+          ),
+          SizedBox(height: 18),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppConstants.padding),
+            child: OrderForm(
               key: _orderFormKey,
               deliveryMethodNotifier: _deliveryMethodNotifier,
               updateDelivery: (DeliveryMethod method) =>
@@ -86,143 +94,151 @@ class _CartScreenState extends State<CartScreen> {
               },
               totalPrice: _getTotalSum(),
             ),
-            SizedBox(height: 16),
-          ],
-        ),
+          ),
+          SizedBox(height: 20),
+        ],
       ),
     );
   }
 
   Widget _buildCartItem(
       CartItem item, int index, Animation<double> animation, bool isLastItem) {
-    return SizeTransition(
-      sizeFactor: animation,
-      child: CartItemWidget(
-        item: item,
-        onDelete: () => _deleteItemFromCart(index),
-        onQuantityChanged: (newQuantity) =>
-            _updateCartItem(index, item.copyWith(quantity: newQuantity)),
-        onWeightChanged: (newWeight) =>
-            _updateCartItem(index, item.copyWith(weight: newWeight)),
-        isLastItem: isLastItem,
-      ),
-    );
-  }
-
-  void _showDeliveryDetails(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.black.withOpacity(0.8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
-      ),
-      builder: (BuildContext context) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                'Условия доставки',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              _buildConditionItem(
-                  'При заказе от 800 ₽ - доставка курьером бесплатная.'),
-              Divider(color: Colors.grey),
-              _buildConditionItem(
-                  'При заказе до 800 ₽ - стоимость доставки 100 ₽.'),
-              Divider(color: Colors.grey),
-              _buildConditionItem(
-                  'Доставка осуществляется по городу ежедневно с 9:00 до 21:00.'),
-            ],
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLastItem ? 0 : 10),
+      child: SizeTransition(
+        sizeFactor: animation,
+        axisAlignment: 0.0,
+        child: Card(
+          margin: EdgeInsets.zero,
+          elevation: 0,
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildConditionItem(String condition) {
-    return Text(
-      condition,
-      style: TextStyle(color: Colors.white, fontSize: 14),
+          child: CartItemWidget(
+            item: item,
+            onDelete: () => _deleteItemFromCart(index),
+            onQuantityChanged: (newQuantity) =>
+                _updateCartItem(index, item.copyWith(quantity: newQuantity)),
+            onWeightChanged: (newWeight) =>
+                _updateCartItem(index, item.copyWith(weight: newWeight)),
+            isLastItem: isLastItem,
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildBottomNavigationBar() {
     final totalSum = _getTotalSum();
-    return cartBox.isEmpty
+    final isEmpty = cartBox.isEmpty;
+    return isEmpty
         ? SizedBox.shrink()
-        : Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_deliveryMethodNotifier.value == DeliveryMethod.courier)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          totalSum >= 800
-                              ? 'Бесплатная доставка'
-                              : 'Доставка по городу от 100 ₽, до бесплатной доставки еще нужно ${800 - totalSum} ₽',
-                          style: AppStyles.bodyTextStyle
-                              .copyWith(color: AppColors.green),
+        : Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 15,
+                  offset: Offset(0, -2),
+                ),
+              ],
+            ),
+            padding: EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 10),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_deliveryMethodNotifier.value == DeliveryMethod.courier)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            totalSum >= 800
+                                ? 'Бесплатная доставка'
+                                : 'Доставка по городу от 100 ₽, до бесплатной доставки еще нужно ${800 - totalSum} ₽',
+                            style: AppStyles.bodyTextStyle.copyWith(
+                              color: totalSum >= 800
+                                  ? AppColors.green
+                                  : AppColors.red,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        IconButton(
+                          icon:
+                              Icon(Icons.info_outline, color: AppColors.green),
+                          onPressed: () => _showDeliveryDetails(context),
+                        ),
+                      ],
+                    ),
+                  SizedBox(height: 10),
+                  AnimatedSwitcher(
+                    duration: Duration(milliseconds: 300),
+                    child: ElevatedButton(
+                      key: ValueKey(_isProcessing),
+                      onPressed: _isProcessing ||
+                              (_deliveryMethodNotifier.value ==
+                                      DeliveryMethod.courier &&
+                                  totalSum < 800)
+                          ? null
+                          : () {
+                              _scrollToOrderForm();
+                              if (_orderFormKey.currentState!.validate()) {
+                                final formData =
+                                    _orderFormKey.currentState!.getFormData();
+                                _processOrder(
+                                  formData['method'],
+                                  formData['name'],
+                                  formData['phoneNumber'],
+                                  formData['address'],
+                                  formData['comment'],
+                                );
+                              }
+                            },
+                      style: AppStyles.elevatedButtonStyle.copyWith(
+                        minimumSize: MaterialStateProperty.all<Size>(
+                            Size(double.infinity, 50)),
+                        padding: MaterialStateProperty.all<EdgeInsets>(
+                          EdgeInsets.symmetric(
+                              vertical: AppConstants.paddingSmall),
+                        ),
+                        backgroundColor: MaterialStateProperty.all<Color>(
+                          _isProcessing ||
+                                  (_deliveryMethodNotifier.value ==
+                                          DeliveryMethod.courier &&
+                                      totalSum < 800)
+                              ? AppColors.whitegrey.withOpacity(0.4)
+                              : AppColors.green,
                         ),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.info_outline, color: AppColors.green),
-                        onPressed: () => _showDeliveryDetails(context),
-                      ),
-                    ],
-                  ),
-                SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: _isProcessing ||
-                          (_deliveryMethodNotifier.value ==
-                                  DeliveryMethod.courier &&
-                              totalSum < 800)
-                      ? null
-                      : () {
-                          _scrollToOrderForm();
-                          if (_orderFormKey.currentState!.validate()) {
-                            final formData =
-                                _orderFormKey.currentState!.getFormData();
-                            _processOrder(
-                              formData['method'],
-                              formData['name'],
-                              formData['phoneNumber'],
-                              formData['address'],
-                              formData['comment'],
-                            );
-                          }
-                        },
-                  child: _isProcessing
-                      ? CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white))
-                      : Text(
-                          totalSum >= 800 ||
-                                  _deliveryMethodNotifier.value ==
-                                      DeliveryMethod.pickup
-                              ? 'Оформить заказ на ${totalSum} ₽'
-                              : 'Добавьте товаров еще на ${800 - totalSum} ₽',
-                          style: AppStyles.buttonTextStyle,
-                        ),
-                  style: AppStyles.elevatedButtonStyle.copyWith(
-                    minimumSize: MaterialStateProperty.all<Size>(
-                        Size(double.infinity, 48)),
-                    padding: MaterialStateProperty.all<EdgeInsets>(
-                      EdgeInsets.symmetric(vertical: AppConstants.paddingSmall),
+                      child: _isProcessing
+                          ? SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Text(
+                              totalSum >= 800 ||
+                                      _deliveryMethodNotifier.value ==
+                                          DeliveryMethod.pickup
+                                  ? 'Оформить заказ на ${totalSum} ₽'
+                                  : 'Добавьте товаров еще на ${800 - totalSum} ₽',
+                              style: AppStyles.buttonTextStyle,
+                            ),
                     ),
                   ),
-                ),
-                SizedBox(height: 16), // Добавлен нижний отступ
-              ],
+                ],
+              ),
             ),
           );
   }
@@ -231,10 +247,57 @@ class _CartScreenState extends State<CartScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
-        duration: Duration(seconds: 1),
+        duration: Duration(milliseconds: 700),
         curve: Curves.easeInOut,
       );
     });
+  }
+
+  void _showDeliveryDetails(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black.withOpacity(0.87),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
+      ),
+      builder: (BuildContext context) {
+        return Padding(
+          padding: const EdgeInsets.all(22.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                'Условия доставки',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              SizedBox(height: 10),
+              _buildConditionItem(
+                  'При заказе от 800 ₽ — доставка курьером бесплатная.'),
+              Divider(color: Colors.grey.shade700),
+              _buildConditionItem(
+                  'При заказе до 800 ₽ — стоимость доставки 100 ₽.'),
+              Divider(color: Colors.grey.shade700),
+              _buildConditionItem(
+                  'Доставка по городу ежедневно с 9:00 до 21:00.'),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildConditionItem(String condition) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Text(
+        condition,
+        style: TextStyle(color: Colors.white, fontSize: 15, height: 1.35),
+      ),
+    );
   }
 
   void _deleteItemFromCart(int index) {
@@ -259,14 +322,11 @@ class _CartScreenState extends State<CartScreen> {
   void _processOrder(DeliveryMethod method, String? name, String? phoneNumber,
       String? address, String? comment) async {
     if (!_orderFormKey.currentState!.validate()) {
-      return; // Если форма не валидна, прекратить выполнение
+      return;
     }
-
     setState(() => _isProcessing = true);
-
     final formData = _orderFormKey.currentState!.getFormData();
 
-    // Используем функцию deliveryMethodToString для получения строки
     String deliveryMethodString = deliveryMethodToString(method);
 
     int orderNum = await _incrementOrderNumber();
@@ -275,9 +335,9 @@ class _CartScreenState extends State<CartScreen> {
       details: _generateOrderDetailsString(
           orderNum, method, name, phoneNumber, address, comment),
       totalPrice: _getTotalSum(),
-      shippingAddress: address ?? 'Не указан', // Значение по умолчанию
-      paymentMethod: deliveryMethodString, // Используем строку здесь
-      phone: phoneNumber ?? 'Не указан', // Значение по умолчанию
+      shippingAddress: address ?? 'Не указан',
+      paymentMethod: deliveryMethodString,
+      phone: phoneNumber ?? 'Не указан',
       timeOrder: DateTime.now(),
     );
 
@@ -288,7 +348,6 @@ class _CartScreenState extends State<CartScreen> {
       MaterialPageRoute(
           builder: (context) => SuccessOrderPage(orderNumber: orderNum)),
     );
-
     setState(() => _isProcessing = false);
   }
 

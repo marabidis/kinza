@@ -46,11 +46,18 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadCartData();
     _fetchData();
     _controller.addListener(_onScroll);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      activeCategoryNotifier.addListener(_syncMenuWithCategory);
+    });
   }
+
+  void _syncMenuWithCategory() {}
 
   void _loadCartData() async {
     try {
       cartBox = await Hive.openBox<CartItem>('cartBox');
+      setState(() {});
     } catch (e) {
       print("Ошибка при работе с Hive: $e");
     }
@@ -102,13 +109,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onScroll() {
     double offset = _controller.offset;
     double itemHeight = _ITEM_HEIGHT;
-
-    for (var category in categoryIndexes.keys) {
-      int index = categoryIndexes[category]!;
+    for (var entry in categoryIndexes.entries) {
+      int index = entry.value;
       double itemOffset = index * itemHeight;
-
       if (offset >= itemOffset && offset < itemOffset + itemHeight) {
-        activeCategoryNotifier.value = category;
+        if (activeCategoryNotifier.value != entry.key) {
+          activeCategoryNotifier.value = entry.key;
+        }
         break;
       }
     }
@@ -117,8 +124,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void scrollToCategory(String category) {
     int? index = categoryIndexes[category];
     if (index != null) {
-      _controller.animateTo(index * _ITEM_HEIGHT,
-          duration: Duration(milliseconds: 500), curve: Curves.easeOut);
+      _controller.animateTo(
+        index * _ITEM_HEIGHT,
+        duration: Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
     }
   }
 
@@ -126,6 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _controller.removeListener(_onScroll);
     _controller.dispose();
+    activeCategoryNotifier.removeListener(_syncMenuWithCategory);
     super.dispose();
   }
 
@@ -142,46 +153,55 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBody() {
-    return cartBox != null
-        ? ValueListenableBuilder<Box<CartItem>>(
-            valueListenable: cartBox!.listenable(),
-            builder: (context, box, _) {
-              return ListView.builder(
-                controller: _controller,
-                itemCount: _data.length,
-                itemBuilder: (context, index) {
-                  var product = _data[index];
-                  return GestureDetector(
-                    onTap: () => _showProductDetail(context, product),
-                    child: CatalogItemWidget(
-                      product: product,
-                      isChecked: isItemInCart(product),
-                      onAddToCart: () => _toggleItemInCart(context, product),
-                    ),
-                  );
-                },
-              );
-            },
-          )
-        : Center(child: CircularProgressIndicator());
+    if (_isLoading) {
+      return ListView.builder(
+        itemCount: 8,
+        padding: const EdgeInsets.only(bottom: 60),
+        itemBuilder: (context, index) =>
+            const CatalogItemWidget(isSkeleton: true),
+      );
+    }
+    if (cartBox == null) return Center(child: CircularProgressIndicator());
+
+    return ValueListenableBuilder<Box<CartItem>>(
+      valueListenable: cartBox!.listenable(),
+      builder: (context, box, _) {
+        return ListView.builder(
+          controller: _controller,
+          itemCount: _data.length,
+          padding: const EdgeInsets.only(bottom: 60),
+          itemBuilder: (context, index) {
+            var product = _data[index];
+            return GestureDetector(
+              onTap: () => _showProductDetail(context, product),
+              child: CatalogItemWidget(
+                product: product,
+                isChecked: isItemInCart(product),
+                onAddToCart: () => _toggleItemInCart(context, product),
+                onRemoveFromCart: () => _toggleItemInCart(context, product),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildFloatingActionButton() {
-    return cartBox != null
-        ? ValueListenableBuilder<Box<CartItem>>(
-            valueListenable: cartBox!.listenable(),
-            builder: (context, box, _) {
-              return FloatingCartButton(
-                itemCount: box.values.fold(
-                    0, (previousValue, item) => previousValue + item.quantity),
-                onPressed: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => CartScreen()));
-                },
-              );
-            },
-          )
-        : Container();
+    if (cartBox == null) return Container();
+    return ValueListenableBuilder<Box<CartItem>>(
+      valueListenable: cartBox!.listenable(),
+      builder: (context, box, _) {
+        return FloatingCartButton(
+          itemCount: box.values
+              .fold(0, (previousValue, item) => previousValue + item.quantity),
+          onPressed: () {
+            Navigator.push(
+                context, MaterialPageRoute(builder: (context) => CartScreen()));
+          },
+        );
+      },
+    );
   }
 
   bool isItemInCart(Product product) {
@@ -211,6 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       await cartBox!.put(product.id.toString(), cartItem);
     }
+    setState(() {});
   }
 
   void _showProductDetail(BuildContext context, Product product) {

@@ -11,20 +11,24 @@ class AppColors {
   static const Color orange = Color(0xFFE24949);
   static const Color whitegrey = Color.fromRGBO(195, 195, 195, 1);
   static const Color lightGreyDivider = Color(0xFFE0E0E0);
+  static const Color priceTag =
+      Color(0xFF29C17E); // цвет ценника (например, зелёный)
 }
 
 class AppConstants {
   static const double indent = 10.0;
 
-  static const double padding = 16.0;
-  static const double paddingSmall = 12.0;
-  static const double paddingLarge = 20.0;
+  static const double padding = 14.0;
+  static const double paddingSmall = 8.0;
+  static const double paddingLarge = 18.0;
 
-  static const double margin = 16.0;
-  static const double marginSmall = 12.0;
-  static const double marginLarge = 20.0;
+  static const double margin = 12.0;
+  static const double marginSmall = 6.0;
+  static const double marginLarge = 16.0;
 
-  static const double baseRadius = 10;
+  static const double baseRadius = 12;
+  static const double cardRadius = 16;
+  static const double cardPadding = 8;
 }
 
 class AppStyles {
@@ -32,24 +36,31 @@ class AppStyles {
     fontFamily: 'Roboto',
     fontSize: 16,
     fontWeight: FontWeight.w700,
-    height: 19 / 16,
-    letterSpacing: 0,
+    height: 1.18,
     color: AppColors.black,
   );
 
   static const TextStyle catalogItemDescriptionStyle = TextStyle(
     fontFamily: 'Roboto',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: FontWeight.w400,
-    height: 14 / 12,
-    letterSpacing: 0,
+    height: 1.23,
     color: AppColors.grey,
+  );
+
+  static const TextStyle priceTagStyle = TextStyle(
+    fontFamily: 'Roboto',
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+    color: AppColors.white,
+    letterSpacing: 0,
   );
 
   static const TextStyle titleTextStyle = TextStyle(
     fontFamily: 'Roboto',
     fontSize: 20,
     fontWeight: FontWeight.w700,
+    color: AppColors.black,
   );
 
   static const TextStyle buttonTextStyle = TextStyle(
@@ -61,16 +72,29 @@ class AppStyles {
 
   static const TextStyle bodyTextStyle = TextStyle(
     fontFamily: 'Roboto',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: FontWeight.w500,
     color: AppColors.black,
   );
 
   static const TextStyle subtitleTextStyle = TextStyle(
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: FontWeight.w700,
     color: AppColors.black,
     height: 1.2,
+  );
+
+  static const TextStyle categoryMenuStyle = TextStyle(
+    fontFamily: 'Roboto',
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: AppColors.black,
+  );
+  static const TextStyle categoryMenuSelectedStyle = TextStyle(
+    fontFamily: 'Roboto',
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    color: AppColors.white,
   );
 
   static final ButtonStyle elevatedButtonStyle = ElevatedButton.styleFrom(

@@ -9,6 +9,7 @@ class ApiClient {
   // Метод для получения списка продуктов
   Future<http.Response> getProducts(String endpoint,
       {Map<String, String>? queryParameters}) async {
+    print('[ApiClient] strapiUrl: "${Config.strapiUrl}" endpoint: "$endpoint"');
     final uri = Uri.parse('${Config.strapiUrl}/api/$endpoint')
         .replace(queryParameters: queryParameters ?? {});
 
@@ -21,6 +22,7 @@ class ApiClient {
   // Метод для отправки заказа
   Future<http.Response> sendOrder(
       String endpoint, Map<String, dynamic> body) async {
+    print('[ApiClient] strapiUrl: "${Config.strapiUrl}" endpoint: "$endpoint"');
     final uri = Uri.parse('${Config.strapiUrl}/api/$endpoint');
     print('request: ${uri} ${body}');
     final response = await _client.post(
@@ -38,6 +40,7 @@ class ApiClient {
 
   // Новый метод для получения данных
   Future<http.Response> getData(String endpoint) async {
+    print('[ApiClient] strapiUrl: "${Config.strapiUrl}" endpoint: "$endpoint"');
     final uri = Uri.parse('${Config.strapiUrl}/api/$endpoint');
 
     final response = await _client.get(uri, headers: {

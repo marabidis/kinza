@@ -13,7 +13,8 @@ class CartItemControl extends StatefulWidget {
   final double maxWeight;
   final bool isWeightBased;
 
-  CartItemControl({
+  const CartItemControl({
+    Key? key,
     required this.item,
     required this.onQuantityChanged,
     required this.onWeightChanged,
@@ -23,7 +24,7 @@ class CartItemControl extends StatefulWidget {
     this.minWeight = 0.4,
     this.maxWeight = 999,
     this.isWeightBased = false,
-  });
+  }) : super(key: key);
 
   @override
   _CartItemControlState createState() => _CartItemControlState();
@@ -31,7 +32,7 @@ class CartItemControl extends StatefulWidget {
 
 class _CartItemControlState extends State<CartItemControl> {
   int _quantity = 0;
-  double _weight = 0;
+  double _weight = 0.0;
 
   @override
   void initState() {
@@ -50,14 +51,12 @@ class _CartItemControlState extends State<CartItemControl> {
   Widget _buildQuantityControl() {
     return Row(
       children: [
-        _buildButton("-", () {
-          _updateValue(_quantity - 1);
-        }),
+        _buildButton("-", () => _updateValue(_quantity - 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10.0),
           child: Text(
             '$_quantity',
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: 'Roboto',
               fontSize: 14,
               fontWeight: FontWeight.w400,
@@ -65,18 +64,8 @@ class _CartItemControlState extends State<CartItemControl> {
             ),
           ),
         ),
-        _buildButton("+", () {
-          _updateValue(_quantity + 1);
-        }),
-        SizedBox(width: 20),
-        Text(
-          '${widget.item.price * _quantity} ₽',
-          style: TextStyle(
-            fontFamily: 'Roboto',
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        _buildButton("+", () => _updateValue(_quantity + 1)),
+        // Цена УДАЛЕНА отсюда!
       ],
     );
   }
@@ -85,14 +74,17 @@ class _CartItemControlState extends State<CartItemControl> {
     return Row(
       children: [
         _buildButton("-", () {
-          _updateValue(double.parse(
-              (_weight - (widget.isWeightBased ? 0.1 : 1)).toStringAsFixed(1)));
+          _updateValue(
+            double.parse(
+              (_weight - (widget.isWeightBased ? 0.1 : 1)).toStringAsFixed(1),
+            ),
+          );
         }),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10.0),
           child: Text(
             _weight.toStringAsFixed(1),
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: 'Roboto',
               fontSize: 14,
               fontWeight: FontWeight.w400,
@@ -101,18 +93,13 @@ class _CartItemControlState extends State<CartItemControl> {
           ),
         ),
         _buildButton("+", () {
-          _updateValue(double.parse(
-              (_weight + (widget.isWeightBased ? 0.1 : 1)).toStringAsFixed(1)));
+          _updateValue(
+            double.parse(
+              (_weight + (widget.isWeightBased ? 0.1 : 1)).toStringAsFixed(1),
+            ),
+          );
         }),
-        SizedBox(width: 20),
-        Text(
-          '${(widget.item.price * _weight * 10).toStringAsFixed(2).contains('.00') ? (widget.item.price * _weight * 10).toInt().toString() : (widget.item.price * _weight * 10).toStringAsFixed(2)} ₽',
-          style: TextStyle(
-            fontFamily: 'Roboto',
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        // Цена УДАЛЕНА отсюда!
       ],
     );
   }
@@ -120,20 +107,17 @@ class _CartItemControlState extends State<CartItemControl> {
   void _updateValue(double newValue) {
     if (newValue >
         (widget.isWeightBased ? widget.maxWeight : widget.maxQuantity)) {
-      return; // Не позволяем выходить за границы значения
+      return;
     }
-
     if (newValue == (widget.isWeightBased ? _weight : _quantity)) {
-      return; // Если значение не изменилось, ничего не делаем
+      return;
     }
-
     if (widget.isWeightBased &&
         newValue < (widget.item.minimumWeight ?? widget.minWeight)) {
-      return; // Не позволяем весу быть меньше минимального значения
+      return;
     }
-
     if (!widget.isWeightBased && newValue < 1) {
-      return; // Не позволяем количеству быть меньше 1
+      return;
     }
 
     setState(() {
@@ -144,19 +128,19 @@ class _CartItemControlState extends State<CartItemControl> {
         _quantity = newValue.toInt();
         widget.onQuantityChanged(newValue.toInt());
       }
-      HapticFeedback
-          .mediumImpact(); // Добавляем тактильную обратную связь при изменении значения
+      widget.onAddToCart();
+      HapticFeedback.mediumImpact();
     });
   }
 
   Widget _buildButton(String label, VoidCallback onPressed) {
     return SizedBox(
-      width: 30, // Увеличено для удобства
-      height: 30, // Увеличено для удобства
+      width: 30,
+      height: 30,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          padding: EdgeInsets.all(0),
-          primary: Color.fromRGBO(103, 118, 140, 0.1),
+          padding: EdgeInsets.zero,
+          backgroundColor: const Color.fromRGBO(103, 118, 140, 0.1),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -166,7 +150,7 @@ class _CartItemControlState extends State<CartItemControl> {
         child: Center(
           child: Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: Color.fromRGBO(103, 118, 140, 1),

@@ -110,6 +110,10 @@ unlinked_spec.ds
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 
+
+**/ios_backup
+**/ios_backup_2
+**/ios_backup_3
 # macOS
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 
