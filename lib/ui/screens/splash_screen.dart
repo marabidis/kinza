@@ -24,7 +24,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _loadData() async {
-    // Здесь ваш код для загрузки данных...
     await Future.delayed(const Duration(seconds: 2)); // Имитация задержки
   }
 
@@ -37,7 +36,7 @@ class _SplashScreenState extends State<SplashScreen> {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _navigateToHome();
           });
-          return _buildSplashScreen();
+          return _buildSplashScreen(context);
         } else if (snapshot.hasError) {
           return Scaffold(
             body: Center(
@@ -59,15 +58,16 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
           );
         } else {
-          // Здесь кастомная анимация загрузки
-          return _buildLoadingScreen();
+          return _buildLoadingScreen(context);
         }
       },
     );
   }
 
-  Widget _buildSplashScreen() {
+  Widget _buildSplashScreen(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: colorScheme.background,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -75,17 +75,23 @@ class _SplashScreenState extends State<SplashScreen> {
             SvgPicture.asset(
               'assets/logo_kinza.svg',
               height: 100,
+              color: colorScheme.primary, // Иконка перекрашивается в цвет темы
             ),
             const SizedBox(height: 20),
-            const Text("Сейчас будет вкусно!"),
+            Text(
+              "Сейчас будет вкусно!",
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLoadingScreen() {
+  Widget _buildLoadingScreen(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: colorScheme.background,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -93,11 +99,15 @@ class _SplashScreenState extends State<SplashScreen> {
             SvgPicture.asset(
               'assets/logo_kinza.svg',
               height: 100,
+              color: colorScheme.primary,
             ),
             const SizedBox(height: 28),
-            const Text(
+            Text(
               "Загружаем меню",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: 14),
             const _AnimatedDots(),
@@ -148,10 +158,9 @@ class _AnimatedDotsState extends State<_AnimatedDots>
   }
 
   void _maybeVibrate() {
-    // Вибрация только если изменилось количество точек (шаг анимации)
     if (_dots.value != _lastValue) {
       _lastValue = _dots.value;
-      HapticFeedback.lightImpact(); // или mediumImpact() для чуть сильнее
+      HapticFeedback.lightImpact();
     }
   }
 
@@ -163,16 +172,17 @@ class _AnimatedDotsState extends State<_AnimatedDots>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return AnimatedBuilder(
       animation: _dots,
       builder: (context, child) {
         String dots = '.' * _dots.value;
         return Text(
           dots,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 32,
             letterSpacing: 1,
-            color: Color(0xFFFBC02D),
+            color: colorScheme.primary, // Используем основной цвет темы!
           ),
         );
       },

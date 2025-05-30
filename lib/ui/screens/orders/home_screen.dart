@@ -1,7 +1,13 @@
+// lib/ui/screens/home/home_screen.dart
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_kinza/ui/screens/orders/product/glass_sheet_wrapper.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
+
+import 'package:flutter_kinza/theme/app_colors.dart';
+import 'package:flutter_kinza/theme/app_styles.dart';
+
 import 'package:flutter_kinza/models/product.dart';
 import 'package:flutter_kinza/ui/widgets/my_button.dart';
 import 'package:shimmer/shimmer.dart';
@@ -22,133 +28,184 @@ const _ITEM_HEIGHT = 145.0;
 class HomeScreen extends StatefulWidget {
   final ApiClient apiClient;
 
-  HomeScreen({required this.apiClient});
+  const HomeScreen({super.key, required this.apiClient});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final CatalogFoodRepository nameCategory;
-  late ValueNotifier<String?> activeCategoryNotifier;
+  late final CatalogFoodRepository _foodRepo;
+
+  final List<String> _categories = [
+    'Пицца',
+    'Блюда на мангале',
+    'Хачапури',
+    'К блюду',
+  ];
+
+  String? activeCategory;
   bool _isLoading = true;
-  List<Product> _data = [];
-  ScrollController _controller = ScrollController();
-  Map<String, int> categoryIndexes = {};
+
+  final List<Product> _data = [];
+  final ScrollController _controller = ScrollController();
+  final Map<String, int> _categoryIndexes = {};
 
   Box<CartItem>? cartBox;
 
   @override
   void initState() {
     super.initState();
-    nameCategory = CatalogFoodRepository(widget.apiClient);
-    activeCategoryNotifier = ValueNotifier<String?>(null);
+    _foodRepo = CatalogFoodRepository(widget.apiClient);
     _loadCartData();
     _fetchData();
     _controller.addListener(_onScroll);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      activeCategoryNotifier.addListener(_syncMenuWithCategory);
-    });
   }
 
-  void _syncMenuWithCategory() {}
+  // ---------------- data -----------------
 
-  void _loadCartData() async {
-    try {
-      cartBox = await Hive.openBox<CartItem>('cartBox');
-      setState(() {});
-    } catch (e) {
-      print("Ошибка при работе с Hive: $e");
-    }
+  Future<void> _loadCartData() async {
+    cartBox = await Hive.openBox<CartItem>('cartBox');
+    if (mounted) setState(() {});
   }
 
-  void _fetchData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  /// Загрузка каталога без дублей
+  Future<void> _fetchData() async {
+    setState(() => _isLoading = true);
     try {
-      List<Product> newData =
-          await nameCategory.fetchFoodItemsByCategory('Пицца');
-      if (newData.isNotEmpty) {
-        List<Map<String, dynamic>> dataToSort = newData.map((product) {
-          return {'category': product.category, 'product': product};
-        }).toList();
-        List<Map<String, dynamic>> sortedData = sortCategories(dataToSort);
-        setState(() {
-          _data = sortedData.map((item) => item['product'] as Product).toList();
-          activeCategoryNotifier.value = _data[0].category;
-          _isLoading = false;
-        });
-        _createCategoryIndexMap();
-      } else {
-        print("Нет данных для загрузки");
-        setState(() {
-          _isLoading = false;
-        });
+      final tmp = <Product>[];
+
+      // грузим все категории
+      for (final cat in _categories) {
+        final items = await _foodRepo.fetchFoodItemsByCategory(cat);
+        tmp.addAll(items);
       }
-    } catch (e) {
-      print("Ошибка при загрузке данных: $e");
-      setState(() {
-        _isLoading = false;
-      });
+
+      // убираем повторы по id
+      final uniq = <String, Product>{};
+      for (final p in tmp) {
+        final key = p.id?.toString() ?? '${p.title}_${p.category}';
+        uniq.putIfAbsent(key, () => p);
+      }
+
+      _data
+        ..clear()
+        ..addAll(uniq.values);
+
+      // сортировка по порядку категорий
+      _data.sort(
+        (a, b) => _categories
+            .indexOf(a.category)
+            .compareTo(_categories.indexOf(b.category)),
+      );
+
+      activeCategory = _categories.first;
+      _createCategoryIndexMap();
+    } catch (e, st) {
+      debugPrint('Ошибка при загрузке каталога: $e\n$st');
     }
+
+    if (mounted) setState(() => _isLoading = false);
   }
 
   void _createCategoryIndexMap() {
-    categoryIndexes.clear();
-    for (int i = 0; i < _data.length; i++) {
-      String category = _data[i].category;
-      if (!categoryIndexes.containsKey(category)) {
-        categoryIndexes[category] = i;
-      }
+    _categoryIndexes.clear();
+    for (var i = 0; i < _data.length; i++) {
+      _categoryIndexes.putIfAbsent(_data[i].category, () => i);
     }
   }
 
+  // ------------- scrolling / sync -------------
+
   void _onScroll() {
-    double offset = _controller.offset;
-    double itemHeight = _ITEM_HEIGHT;
-    for (var entry in categoryIndexes.entries) {
-      int index = entry.value;
-      double itemOffset = index * itemHeight;
-      if (offset >= itemOffset && offset < itemOffset + itemHeight) {
-        if (activeCategoryNotifier.value != entry.key) {
-          activeCategoryNotifier.value = entry.key;
+    final offset = _controller.offset;
+    for (final entry in _categoryIndexes.entries) {
+      final start = entry.value * _ITEM_HEIGHT;
+      if (offset >= start && offset < start + _ITEM_HEIGHT) {
+        if (activeCategory != entry.key) {
+          setState(() => activeCategory = entry.key);
         }
         break;
       }
     }
   }
 
-  void scrollToCategory(String category) {
-    int? index = categoryIndexes[category];
-    if (index != null) {
-      _controller.animateTo(
-        index * _ITEM_HEIGHT,
-        duration: Duration(milliseconds: 500),
-        curve: Curves.easeOut,
-      );
-    }
+  void _scrollToCategory(String category) {
+    final idx = _categoryIndexes[category];
+    if (idx == null) return;
+
+    _controller.animateTo(
+      idx * _ITEM_HEIGHT,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.fastOutSlowIn,
+    );
+
+    setState(() => activeCategory = category);
   }
 
-  @override
-  void dispose() {
-    _controller.removeListener(_onScroll);
-    _controller.dispose();
-    activeCategoryNotifier.removeListener(_syncMenuWithCategory);
-    super.dispose();
-  }
+  // ------------- build -------------
 
   @override
   Widget build(BuildContext context) {
+    final menuPaddingTop = MediaQuery.of(context).padding.top + 10;
+    final contentTopPadding = 38 + menuPaddingTop + 8;
+
     return Scaffold(
-      appBar: HorizontalMenu(
-        onCategoryChanged: scrollToCategory,
-        activeCategoryNotifier: activeCategoryNotifier,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      floatingActionButton: _buildFab(),
+      body: Stack(
+        children: [
+          Padding(
+            padding: EdgeInsets.only(top: contentTopPadding),
+            child: _buildBody(),
+          ),
+
+          // стекло под статус-баром / меню
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: Container(
+                  height: contentTopPadding,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // стеклянное «горизонтальное меню»
+          Positioned(
+            top: menuPaddingTop,
+            left: 0,
+            right: 0,
+            child: _buildGlassMenu(),
+          ),
+        ],
       ),
-      body: _buildBody(),
-      floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
+
+  Widget _buildGlassMenu() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(11),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          height: 38,
+          margin: const EdgeInsets.symmetric(horizontal: 10),
+          color: Colors.transparent,
+          child: HorizontalMenu(
+            categories: _categories,
+            activeCategory: activeCategory,
+            onCategoryChanged: _scrollToCategory,
+          ),
+        ),
+      ),
     );
   }
 
@@ -157,28 +214,32 @@ class _HomeScreenState extends State<HomeScreen> {
       return ListView.builder(
         itemCount: 8,
         padding: const EdgeInsets.only(bottom: 60),
-        itemBuilder: (context, index) =>
-            const CatalogItemWidget(isSkeleton: true),
+        itemBuilder: (_, __) => const CatalogItemWidget(isSkeleton: true),
       );
     }
-    if (cartBox == null) return Center(child: CircularProgressIndicator());
+
+    if (cartBox == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final products = _data;
 
     return ValueListenableBuilder<Box<CartItem>>(
       valueListenable: cartBox!.listenable(),
-      builder: (context, box, _) {
+      builder: (_, __, ___) {
         return ListView.builder(
           controller: _controller,
-          itemCount: _data.length,
+          itemCount: products.length,
           padding: const EdgeInsets.only(bottom: 60),
-          itemBuilder: (context, index) {
-            var product = _data[index];
+          itemBuilder: (_, i) {
+            final p = products[i];
             return GestureDetector(
-              onTap: () => _showProductDetail(context, product),
+              onTap: () => _showProductDetail(p),
               child: CatalogItemWidget(
-                product: product,
-                isChecked: isItemInCart(product),
-                onAddToCart: () => _toggleItemInCart(context, product),
-                onRemoveFromCart: () => _toggleItemInCart(context, product),
+                product: p,
+                isChecked: isItemInCart(p),
+                onAddToCart: () => _toggleItemInCart(p),
+                onRemoveFromCart: () => _toggleItemInCart(p),
               ),
             );
           },
@@ -187,105 +248,74 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildFloatingActionButton() {
-    if (cartBox == null) return Container();
+  // ------------- cart helpers -------------
+
+  Widget _buildFab() {
+    if (cartBox == null) return const SizedBox();
     return ValueListenableBuilder<Box<CartItem>>(
       valueListenable: cartBox!.listenable(),
-      builder: (context, box, _) {
+      builder: (_, box, __) {
+        final count = box.values.fold<int>(0, (prev, e) => prev + e.quantity);
         return FloatingCartButton(
-          itemCount: box.values
-              .fold(0, (previousValue, item) => previousValue + item.quantity),
-          onPressed: () {
-            Navigator.push(
-                context, MaterialPageRoute(builder: (context) => CartScreen()));
-          },
+          itemCount: count,
+          onPressed: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => CartScreen())),
         );
       },
     );
   }
 
-  bool isItemInCart(Product product) {
-    return cartBox != null && cartBox!.containsKey(product.id.toString());
-  }
+  bool isItemInCart(Product p) =>
+      cartBox != null && cartBox!.containsKey(p.id.toString());
 
-  void _toggleItemInCart(BuildContext context, Product product,
-      [int quantity = 1]) async {
-    if (cartBox == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Ошибка корзины.')));
-      return;
-    }
-
-    if (cartBox!.containsKey(product.id.toString())) {
-      await cartBox!.delete(product.id.toString());
+  Future<void> _toggleItemInCart(Product p, [int quantity = 1]) async {
+    if (cartBox == null) return;
+    final key = p.id.toString();
+    if (cartBox!.containsKey(key)) {
+      await cartBox!.delete(key);
     } else {
-      final cartItem = CartItem(
-        id: product.id.toString(),
-        title: product.title,
-        price: product.price,
-        weight: product.weight,
-        quantity: quantity,
-        thumbnailUrl: product.imageUrl?.url,
-        isWeightBased: product.isWeightBased ?? false,
-        minimumWeight: product.minimumWeight,
+      await cartBox!.put(
+        key,
+        CartItem(
+          id: key,
+          title: p.title,
+          price: p.price,
+          weight: p.weight,
+          quantity: quantity,
+          thumbnailUrl: p.imageUrl?.url,
+          isWeightBased: p.isWeightBased ?? false,
+          minimumWeight: p.minimumWeight,
+        ),
       );
-      await cartBox!.put(product.id.toString(), cartItem);
     }
     setState(() {});
   }
 
-  void _showProductDetail(BuildContext context, Product product) {
-    CartItem? cartItem = cartBox?.get(product.id.toString());
-    int currentQuantity = cartItem?.quantity ?? 1;
-    double currentWeight = cartItem?.weight ?? 0.4;
+  /* ----- главное: открываем стеклянный bottom-sheet ----- */
+  void _showProductDetail(Product p) {
+    final cartItem = cartBox?.get(p.id.toString());
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent, // лист прозрачен
+      barrierColor: Colors.transparent, // фон тоже
       isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(15.0)),
-      ),
-      builder: (context) {
-        return ProductDetailWidget(
-          product: product,
-          onAddToCart: () => _toggleItemInCart(context, product),
-          isInCart: isItemInCart(product),
+      builder: (_) => GlassSheetWrapper(
+        // обёртка со blur
+        child: ProductDetailWidget(
+          product: p,
+          isInCart: isItemInCart(p),
+          initialQuantity: cartItem?.quantity ?? 1,
+          initialWeight: cartItem?.weight ?? .4,
+          onAddToCart: () => _toggleItemInCart(p),
+          onQuantityChanged: (q) => _toggleItemInCart(p, q),
+          onWeightChanged: (_) => _toggleItemInCart(p),
           onCartStateChanged: () => setState(() {}),
-          onQuantityChanged: (quantity) {
-            if (!isItemInCart(product)) {
-              _toggleItemInCart(context, product, quantity);
-            }
-          },
-          onWeightChanged: (weight) {
-            if (!isItemInCart(product)) {
-              _toggleItemInCart(context, product);
-            }
-          },
+          updateCartItem: (ci) => cartBox?.put(ci.id, ci),
+          removeCartItem: (id) => cartBox?.delete(id),
           onItemAdded: () {},
-          initialQuantity: currentQuantity,
-          initialWeight: currentWeight,
-          updateCartItem: (updatedItem) =>
-              _updateCartItem(context, updatedItem),
-          removeCartItem: (itemId) => _removeCartItem(context, itemId),
-        );
-      },
+        ),
+      ),
     );
-  }
-
-  void _updateCartItem(BuildContext context, CartItem updatedItem) {
-    if (cartBox == null) return;
-
-    int index = cartBox!.values
-        .toList()
-        .indexWhere((item) => item.id == updatedItem.id);
-    if (index != -1) {
-      cartBox!.putAt(index, updatedItem);
-    }
-  }
-
-  void _removeCartItem(BuildContext context, String itemId) {
-    if (cartBox == null) return;
-
-    cartBox!.delete(itemId);
   }
 }

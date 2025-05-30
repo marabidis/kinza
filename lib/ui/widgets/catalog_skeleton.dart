@@ -6,24 +6,24 @@ class CatalogSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Совпадает с размерами CatalogItemWidget
+    final cs = Theme.of(context).colorScheme;
     final double imageSize = 72;
     final double cardHeight = 108;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       child: Shimmer.fromColors(
-        baseColor: Colors.grey.shade300,
-        highlightColor: Colors.grey.shade100,
+        baseColor: cs.surfaceVariant,
+        highlightColor: cs.surface,
         period: const Duration(milliseconds: 1200),
         child: Container(
           height: cardHeight,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cs.surfaceVariant,
             borderRadius: BorderRadius.circular(13),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.025),
+                color: cs.shadow.withOpacity(0.025),
                 blurRadius: 3,
                 offset: const Offset(0, 1),
               ),
@@ -37,14 +37,14 @@ class CatalogSkeleton extends StatelessWidget {
                 height: imageSize,
                 margin: const EdgeInsets.all(0),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cs.surface,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade200, width: 2),
+                  border: Border.all(color: cs.outlineVariant, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: cs.shadow.withOpacity(0.04),
                       blurRadius: 6,
-                      offset: Offset(0, 2),
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -62,7 +62,7 @@ class CatalogSkeleton extends StatelessWidget {
                         height: 16,
                         width: 120,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cs.surface,
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -72,7 +72,7 @@ class CatalogSkeleton extends StatelessWidget {
                         height: 12,
                         width: 170,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cs.surface,
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
@@ -81,7 +81,7 @@ class CatalogSkeleton extends StatelessWidget {
                         height: 12,
                         width: 90,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cs.surface,
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
@@ -93,7 +93,7 @@ class CatalogSkeleton extends StatelessWidget {
                             width: 64,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: cs.surface,
                               borderRadius: BorderRadius.circular(7),
                             ),
                           ),
@@ -102,11 +102,11 @@ class CatalogSkeleton extends StatelessWidget {
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: cs.surface,
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
+                                  color: cs.shadow.withOpacity(0.04),
                                   blurRadius: 6,
                                   offset: Offset(0, 2),
                                 ),

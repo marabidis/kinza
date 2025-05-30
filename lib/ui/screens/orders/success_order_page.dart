@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
+import 'package:flutter_kinza/styles/1app_constants.dart';
+
+import 'package:flutter_kinza/theme/app_colors.dart';
+import 'package:flutter_kinza/theme/app_styles.dart';
+import 'package:flutter_kinza/theme/app_constants.dart';
 
 class SuccessOrderPage extends StatelessWidget {
   final int orderNumber;

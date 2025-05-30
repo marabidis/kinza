@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
 
 class EmptyCartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.background, // <-- используем фон темы!
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -18,16 +20,16 @@ class EmptyCartScreen extends StatelessWidget {
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white,
+                    color: colorScheme.surface, // <-- фон круга по теме
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.07),
+                        color: colorScheme.shadow.withOpacity(0.07),
                         blurRadius: 28,
-                        offset: Offset(0, 10),
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
-                  padding: EdgeInsets.all(40),
+                  padding: const EdgeInsets.all(40),
                   child: Image.asset(
                     'assets/sad_kitten_white_bg.png',
                     width: 170,
@@ -35,22 +37,28 @@ class EmptyCartScreen extends StatelessWidget {
                     fit: BoxFit.contain,
                   ),
                 ),
-                SizedBox(height: 36),
+                const SizedBox(height: 36),
                 Text(
                   "Пока, тут пусто!",
-                  style: AppStyles.subtitleTextStyle,
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.onBackground,
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 14),
+                const SizedBox(height: 14),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
                   child: Text(
                     "Добавьте что-нибудь вкусное из меню!",
-                    style: AppStyles.bodyTextStyle,
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onBackground.withOpacity(0.7),
+                      fontWeight: FontWeight.w500,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
-                SizedBox(height: 40),
+                const SizedBox(height: 40),
                 // КОМПАКТНАЯ КНОПКА
                 SizedBox(
                   width: double.infinity,
@@ -58,24 +66,23 @@ class EmptyCartScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () =>
                         Navigator.popUntil(context, (route) => route.isFirst),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(60),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 0),
+                      minimumSize: const Size(double.infinity, 44),
+                      elevation: 0,
+                    ),
                     child: Text(
                       "В каталог",
-                      style: AppStyles.buttonTextStyle.copyWith(
+                      style: textTheme.labelLarge?.copyWith(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    style: AppStyles.elevatedButtonStyle.copyWith(
-                      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(60),
-                        ),
-                      ),
-                      padding: MaterialStateProperty.all<EdgeInsets>(
-                        EdgeInsets.symmetric(vertical: 0),
-                      ),
-                      minimumSize: MaterialStateProperty.all<Size>(
-                        Size(double.infinity, 44),
+                        color:
+                            colorScheme.onPrimary, // цвет текста кнопки по теме
                       ),
                     ),
                   ),

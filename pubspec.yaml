@@ -11,6 +11,7 @@ flutter:
     - assets/logo_kinza.svg
     - assets/shopping_cart.svg
     - assets/sad_kitten_white_bg.png
+    - assets/ostray_perez.png
     - assets/.env
     - assets/success_order_kinza_white_bg.png
     

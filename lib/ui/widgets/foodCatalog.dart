@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Для вибрации!
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
 import 'package:flutter_kinza/models/product.dart';
+import 'main_skeleton_container.dart';
+import 'package:flutter_kinza/theme/app_theme.dart';
 
 class CatalogItemWidget extends StatefulWidget {
   final Product? product;
@@ -39,7 +39,7 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     _isInCart = widget.isChecked;
 
     _controller = AnimationController(
-      duration: Duration(milliseconds: 200),
+      duration: AppTheme.animNormal,
       vsync: this,
     );
 
@@ -70,151 +70,87 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     super.dispose();
   }
 
-  // --- SKELTON UI ---
   Widget _buildSkeleton() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
-      child: Container(
-        margin: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        padding: EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(13),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.025),
-              blurRadius: 3,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Картинка
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      padding: EdgeInsets.all(AppTheme.cardPadding),
+      decoration: AppTheme.cardDecoration(context),
+      child: Row(
+        children: [
+          MainSkeletonContainer(
+            width: 96, height: 96, radius: AppTheme.imageRadius,
+            // 👇 Передавай цвет скелетона, если MainSkeletonContainer поддерживает
+            color: colorScheme.surfaceVariant,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  MainSkeletonContainer(
+                    width: 100,
+                    height: 16,
+                    radius: 8,
+                    margin: const EdgeInsets.only(bottom: 6),
+                    color: colorScheme.surfaceVariant,
+                  ),
+                  MainSkeletonContainer(
+                    width: 160,
+                    height: 12,
+                    radius: 6,
+                    margin: const EdgeInsets.only(bottom: 6),
+                    color: colorScheme.surfaceVariant,
+                  ),
+                  MainSkeletonContainer(
+                    width: 100,
+                    height: 12,
+                    radius: 6,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    color: colorScheme.surfaceVariant,
+                  ),
+                  Row(
+                    children: [
+                      MainSkeletonContainer(
+                        width: 56,
+                        height: 22,
+                        radius: 7,
+                        color: colorScheme.surfaceVariant,
+                      ),
+                      const Spacer(),
+                      MainSkeletonContainer(
+                        width: 28,
+                        height: 28,
+                        rounded: true,
+                        color: colorScheme.surfaceVariant,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 2),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Заголовок
-                    Container(
-                      height: 16,
-                      width: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    // Описание
-                    Container(
-                      height: 12,
-                      width: 160,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Container(
-                      height: 12,
-                      width: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    Row(
-                      children: [
-                        // Цена
-                        Container(
-                          width: 56,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(7),
-                          ),
-                        ),
-                        Spacer(),
-                        // Кнопка
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-  // --- END SKELTON ---
 
-  // Новый: метка теперь РЕАЛЬНО над фото и не обрезается!
   Widget _buildPhotoWithMark() {
     final mark = widget.product?.mark;
-    Color? backgroundColor;
-    String text = '';
-    if (mark == 'острая') {
-      backgroundColor = AppColors.red;
-      text = 'острая';
-    } else if (mark == 'дети обожают') {
-      backgroundColor = AppColors.pink;
-      text = 'дети обожают';
-    }
-
     return Stack(
       clipBehavior: Clip.none,
       children: [
         _buildImage(),
-        if (mark == 'острая' || mark == 'дети обожают')
+        if (mark == 'острая')
           Positioned(
-            top: -8,
+            top: 0,
             left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: backgroundColor!.withOpacity(0.23),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  text,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+            child: Image.asset(
+              'assets/ostray_perez.png',
+              width: 60,
+              height: 60,
             ),
           ),
       ],
@@ -222,37 +158,33 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
   }
 
   Widget _buildImage() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      width: 72,
-      height: 72,
+      width: 96,
+      height: 96,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.grey.shade200, width: 2),
+        borderRadius: BorderRadius.circular(AppTheme.imageRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: Offset(0, 2),
+            color: colorScheme.shadow.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: ClipOval(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppTheme.imageRadius),
         child: CachedNetworkImage(
           imageUrl:
               widget.product?.imageUrl?.thumbnailUrl ?? 'placeholder_image_url',
-          placeholder: (context, url) => Shimmer.fromColors(
-            baseColor: Colors.grey[300]!,
-            highlightColor: Colors.grey[100]!,
-            child: Container(
-              width: 72,
-              height: 72,
-              color: Colors.white,
-            ),
-          ),
-          errorWidget: (context, url, error) => Icon(Icons.error, size: 72),
+          placeholder: (context, url) => MainSkeletonContainer(
+              width: 96,
+              height: 96,
+              radius: AppTheme.imageRadius,
+              color: colorScheme.surfaceVariant),
+          errorWidget: (context, url, error) =>
+              const Icon(Icons.error, size: 64),
           fit: BoxFit.cover,
-          width: 72,
-          height: 72,
         ),
       ),
     );
@@ -276,83 +208,65 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     if (widget.isSkeleton) {
       return _buildSkeleton();
     }
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
         return Transform.scale(
           scale: _cardScale.value,
           child: Container(
-            margin: EdgeInsets.symmetric(
-              vertical: 6,
-              horizontal: 4,
-            ),
-            padding: EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Color(0xFFFDFDFD),
-              borderRadius: BorderRadius.circular(13),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.025),
-                  blurRadius: 3,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
+            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            padding: EdgeInsets.all(AppTheme.cardPadding),
+            decoration: AppTheme.cardDecoration(context),
             child: Row(
               children: [
                 _buildPhotoWithMark(),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           widget.product?.title ?? "",
-                          style: AppStyles.catalogItemTitleStyle.copyWith(
+                          style: textTheme.titleMedium?.copyWith(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
                           widget.product?.description ?? "",
-                          style: AppStyles.catalogItemDescriptionStyle.copyWith(
+                          style: textTheme.bodySmall?.copyWith(
                             fontSize: 12,
-                            color: Color(0xFF67768C),
+                            color: colorScheme.onSurfaceVariant,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 7),
+                        const SizedBox(height: 7),
                         Row(
                           children: [
                             Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(7),
-                                border: Border.all(
-                                  color: Color(0xFFE9E9E9),
-                                  width: 1,
-                                ),
-                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 13, vertical: 7),
+                              decoration: AppTheme.priceTagDecoration(context),
                               child: Text(
                                 widget.product != null
-                                    ? 'от ${widget.product!.price}₽'
+                                    ? '${widget.product!.isWeightBased == true ? "от " : ""}${widget.product!.price}₽'
                                     : '',
-                                style: TextStyle(
-                                  color: AppColors.black,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
+                                style: textTheme.labelLarge?.copyWith(
+                                  color: colorScheme.onSurface,
                                 ),
                               ),
                             ),
-                            Spacer(),
+                            const Spacer(),
                             Transform.scale(
                               scale: _plusScale.value,
                               child: IconButton(
@@ -360,10 +274,11 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
                                   _isInCart
                                       ? Icons.remove_circle_outline
                                       : Icons.add_circle_outline,
-                                  color:
-                                      _isInCart ? Colors.red : AppColors.green,
+                                  color: _isInCart
+                                      ? colorScheme.error
+                                      : colorScheme.primary,
                                 ),
-                                splashRadius: 18,
+                                splashRadius: AppTheme.iconButtonSplashRadius,
                                 onPressed: _handlePlusMinusTap,
                                 tooltip: _isInCart
                                     ? 'Удалить из корзины'

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_kinza/models/cart_item.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
-import 'package:flutter_kinza/ui/widgets/cart/cart_item_control.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:flutter_kinza/models/cart_item.dart';
+import 'package:flutter_kinza/styles/1app_constants.dart';
+import 'package:flutter_kinza/ui/widgets/cart/cart_item_control.dart';
 
 class CartItemWidget extends StatelessWidget {
   final CartItem? item;
@@ -41,7 +41,9 @@ class CartItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isSkeleton) return _buildSkeleton(context);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (isSkeleton) return _buildSkeleton(colorScheme);
 
     if (item == null) return const SizedBox();
 
@@ -51,24 +53,24 @@ class CartItemWidget extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface, // Используем цвет поверхности темы
         borderRadius: BorderRadius.circular(17),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.045),
+            color: colorScheme.shadow.withOpacity(0.08),
             blurRadius: 14,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      margin: EdgeInsets.symmetric(vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       child: Padding(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildItemImage(),
-            SizedBox(width: 16),
+            _buildItemImage(colorScheme),
+            const SizedBox(width: 16),
             Expanded(
               child: Stack(
                 children: [
@@ -77,10 +79,11 @@ class CartItemWidget extends StatelessWidget {
                     children: [
                       Text(
                         item!.title,
-                        style: AppStyles.catalogItemTitleStyle.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -90,10 +93,10 @@ class CartItemWidget extends StatelessWidget {
                           child: Text(
                             '${item!.weight} кг',
                             style:
-                                AppStyles.catalogItemDescriptionStyle.copyWith(
-                              color: Color(0xFF67768C),
-                              fontSize: 14,
-                            ),
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.secondary,
+                                      fontSize: 14,
+                                    ),
                           ),
                         ),
                       if (item!.weight == null)
@@ -101,14 +104,16 @@ class CartItemWidget extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
                             'Вес не указан',
-                            style:
-                                AppStyles.catalogItemDescriptionStyle.copyWith(
-                              color: Colors.grey.shade400,
-                              fontSize: 14,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: colorScheme.secondary.withOpacity(0.5),
+                                  fontSize: 14,
+                                ),
                           ),
                         ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -125,21 +130,24 @@ class CartItemWidget extends StatelessWidget {
                               isWeightBased: item!.isWeightBased,
                             ),
                           ),
-                          SizedBox(width: 14),
+                          const SizedBox(width: 14),
                           Text(
                             priceText,
-                            style: TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.black,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: colorScheme
+                                      .onSurface, // цвет текста на фоне
+                                ),
                           ),
                         ],
                       ),
                     ],
                   ),
-                  // Компактная кнопка удаления
+                  // Кнопка удаления (правый верхний угол)
                   Positioned(
                     top: 0,
                     right: 0,
@@ -149,13 +157,13 @@ class CartItemWidget extends StatelessWidget {
                         borderRadius: BorderRadius.circular(100),
                         onTap: _handleDelete,
                         child: Container(
-                          width: 28, // Сделали меньше
+                          width: 28,
                           height: 28,
                           alignment: Alignment.center,
                           child: Icon(
                             Icons.remove_circle_outline,
-                            color: AppColors.red,
-                            size: 22, // Сделали меньше
+                            color: colorScheme.error, // Красный из темы!
+                            size: 22,
                           ),
                         ),
                       ),
@@ -170,88 +178,83 @@ class CartItemWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildSkeleton(BuildContext context) {
+  Widget _buildSkeleton(ColorScheme colorScheme) {
     return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
+      baseColor: colorScheme.surfaceVariant,
+      highlightColor: colorScheme.background,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(17),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.045),
+              color: colorScheme.shadow.withOpacity(0.08),
               blurRadius: 14,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        margin: EdgeInsets.symmetric(vertical: 6),
-        padding: EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.all(12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Фото
             Container(
               width: 70,
               height: 70,
               decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(13),
+                color: colorScheme.surfaceVariant,
               ),
             ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Expanded(
               child: Stack(
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Заголовок
                       Container(
                         height: 16,
                         width: 120,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surfaceVariant,
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      SizedBox(height: 8),
-                      // Вес/описание
+                      const SizedBox(height: 8),
                       Container(
                         height: 12,
                         width: 70,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surfaceVariant,
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
-                      SizedBox(height: 12),
-                      // Контрол (условно длинный прямоугольник)
+                      const SizedBox(height: 12),
                       Container(
                         height: 36,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surfaceVariant,
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      SizedBox(height: 10),
-                      // Цена
+                      const SizedBox(height: 10),
                       Align(
                         alignment: Alignment.centerRight,
                         child: Container(
                           height: 16,
                           width: 54,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: colorScheme.surfaceVariant,
                             borderRadius: BorderRadius.circular(7),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  // Компактная кнопка удалить (скелетон)
+                  // Кнопка удалить — скелетон
                   Positioned(
                     top: 0,
                     right: 0,
@@ -259,7 +262,7 @@ class CartItemWidget extends StatelessWidget {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: colorScheme.surfaceVariant,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -273,39 +276,37 @@ class CartItemWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildItemImage() {
+  Widget _buildItemImage(ColorScheme colorScheme) {
     return Container(
       width: 70,
       height: 70,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.grey.shade100, width: 1.8),
+        borderRadius: BorderRadius.circular(13),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.045),
+            color: colorScheme.shadow.withOpacity(0.08),
             blurRadius: 11,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: ClipOval(
-        child: CachedNetworkImage(
-          imageUrl: item?.thumbnailUrl ?? 'fallback_image_url',
-          placeholder: (context, url) => Shimmer.fromColors(
-            baseColor: Colors.grey[300]!,
-            highlightColor: Colors.grey[100]!,
-            child: Container(
-              width: 70,
-              height: 70,
-              color: Colors.white,
-            ),
+      clipBehavior: Clip.hardEdge,
+      child: CachedNetworkImage(
+        imageUrl: item?.thumbnailUrl ?? 'fallback_image_url',
+        placeholder: (context, url) => Shimmer.fromColors(
+          baseColor: colorScheme.surfaceVariant,
+          highlightColor: colorScheme.background,
+          child: Container(
+            width: 70,
+            height: 70,
+            color: colorScheme.surface,
           ),
-          errorWidget: (context, url, error) =>
-              Icon(Icons.error, size: 44, color: Colors.grey[400]),
-          fit: BoxFit.cover,
-          width: 70,
-          height: 70,
         ),
+        errorWidget: (context, url, error) => Icon(Icons.error,
+            size: 44, color: colorScheme.error.withOpacity(0.5)),
+        fit: BoxFit.cover,
+        width: 70,
+        height: 70,
       ),
     );
   }

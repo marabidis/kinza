@@ -1,141 +1,117 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_kinza/styles/app_constants.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter_kinza/theme/app_theme.dart';
 
-class HorizontalMenu extends StatefulWidget implements PreferredSizeWidget {
+class HorizontalMenu extends StatefulWidget {
+  final List<String> categories;
+  final String? activeCategory;
   final Function(String) onCategoryChanged;
-  final ValueNotifier<String?> activeCategoryNotifier;
 
   const HorizontalMenu({
-    required this.onCategoryChanged,
-    required this.activeCategoryNotifier,
     Key? key,
+    required this.categories,
+    required this.activeCategory,
+    required this.onCategoryChanged,
   }) : super(key: key);
 
-  @override
-  _HorizontalMenuState createState() => _HorizontalMenuState();
-
-  @override
-  Size get preferredSize => const Size.fromHeight(60);
-}
-
-class _HorizontalMenuState extends State<HorizontalMenu> {
-  final ScrollController _scrollController = ScrollController();
-
-  final Map<String, String> _categoryEmojis = const {
+  static const Map<String, String> _emojis = {
     'Пицца': '🍕',
     'Блюда на мангале': '🍖',
     'Хачапури': '🧀',
     'К блюду': '🥗',
   };
 
-  final List<String> _categories = const [
-    'Пицца',
-    'Блюда на мангале',
-    'Хачапури',
-    'К блюду',
-  ];
+  @override
+  State<HorizontalMenu> createState() => _HorizontalMenuState();
+}
 
-  late final Map<String, GlobalKey> _itemKeys = {
-    for (var c in _categories) c: GlobalKey()
-  };
+class _HorizontalMenuState extends State<HorizontalMenu> {
+  late final List<GlobalKey> _itemKeys =
+      List.generate(widget.categories.length, (_) => GlobalKey());
 
   @override
-  void initState() {
-    super.initState();
-    widget.activeCategoryNotifier.addListener(_scrollToActiveCategory);
+  void didUpdateWidget(covariant HorizontalMenu oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.activeCategory != oldWidget.activeCategory) {
+      SchedulerBinding.instance
+          .addPostFrameCallback((_) => _ensureActiveVisible());
+    }
   }
 
-  @override
-  void dispose() {
-    widget.activeCategoryNotifier.removeListener(_scrollToActiveCategory);
-    _scrollController.dispose();
-    super.dispose();
-  }
+  void _ensureActiveVisible() {
+    final idx = widget.categories.indexOf(widget.activeCategory ?? '');
+    if (idx == -1) return;
 
-  void _scrollToActiveCategory() {
-    final active = widget.activeCategoryNotifier.value;
-    if (active == null) return;
-
-    final key = _itemKeys[active];
-    final ctx = key?.currentContext;
+    final ctx = _itemKeys[idx].currentContext;
     if (ctx == null) return;
 
-    final box = ctx.findRenderObject() as RenderBox;
-    final itemWidth = box.size.width;
-    final itemPosition =
-        box.localToGlobal(Offset.zero, ancestor: context.findRenderObject()).dx;
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final currentOffset = _scrollController.offset;
-
-    double target =
-        currentOffset + itemPosition - (screenWidth / 2 - itemWidth / 2);
-
-    target = target.clamp(
-      0.0,
-      _scrollController.position.maxScrollExtent,
-    );
-
-    _scrollController.animateTo(
-      target,
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeInOutCubic,
+    Scrollable.ensureVisible(
+      ctx,
+      alignment: 0.5,
+      curve: Curves.fastOutSlowIn,
+      duration: const Duration(milliseconds: 500),
     );
   }
-
-  // Вынесем эмодзи отдельно, чтобы паддинг применялся только к ним.
-  Widget _emojiWidget(String emoji) => Padding(
-        padding: const EdgeInsets.only(bottom: 2),
-        child: Text(
-          emoji,
-          style: const TextStyle(
-            fontSize: 20, // или 22 — можно подобрать визуально
-            height: 1.0,
-          ),
-        ),
-      );
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      toolbarHeight: 60,
-      titleSpacing: 0,
-      title: ValueListenableBuilder<String?>(
-        valueListenable: widget.activeCategoryNotifier,
-        builder: (_, active, __) => SizedBox(
-          height: 44,
-          child: ListView.separated(
-            controller: _scrollController,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            itemCount: _categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final cat = _categories[i];
-              final isActive = cat == active;
-              final emoji = _categoryEmojis[cat] ?? '';
-
-              return _MenuButton(
-                key: _itemKeys[cat],
-                emoji: emoji,
-                text: cat,
-                active: isActive,
-                onTap: () {
-                  if (!isActive) {
-                    widget.activeCategoryNotifier.value = cat;
-                    widget.onCategoryChanged(cat);
-                  }
-                },
-              );
-            },
+    return SizedBox(
+      height: AppTheme.menuHeight,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppTheme.menuRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            // почти-невидимый цвет, чтобы BackdropFilter работал и "между" кнопками
+            color: Colors.white.withOpacity(0.01),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              itemCount: widget.categories.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (context, i) {
+                final cat = widget.categories[i];
+                return _MenuButton(
+                  key: _itemKeys[i],
+                  emoji: HorizontalMenu._emojis[cat] ?? '',
+                  text: cat,
+                  active: cat == widget.activeCategory,
+                  onTap: () => widget.onCategoryChanged(cat),
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
 }
+
+/* ---------- helper: десатурация ---------- */
+const _kGray = ColorFilter.matrix(<double>[
+  0.2126,
+  0.7152,
+  0.0722,
+  0,
+  0,
+  0.2126,
+  0.7152,
+  0.0722,
+  0,
+  0,
+  0.2126,
+  0.7152,
+  0.0722,
+  0,
+  0,
+  0,
+  0,
+  0,
+  1,
+  0,
+]);
+/* ----------------------------------------- */
 
 class _MenuButton extends StatelessWidget {
   final String emoji;
@@ -153,52 +129,49 @@ class _MenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final emojiWidget = active
+        ? Text(emoji,
+            style: TextStyle(fontSize: AppTheme.menuEmojiSize, height: 1))
+        : ColorFiltered(
+            colorFilter: _kGray,
+            child: Text(emoji,
+                style: TextStyle(fontSize: AppTheme.menuEmojiSize, height: 1)),
+          );
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        duration: AppTheme.animFast,
+        padding: EdgeInsets.symmetric(
+          horizontal: AppTheme.menuButtonPadH,
+          vertical: AppTheme.menuButtonPadV,
+        ),
         decoration: BoxDecoration(
-          color: active ? AppColors.orange : Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: AppColors.orange.withOpacity(0.19),
-                    blurRadius: 15,
-                    offset: Offset(0, 4),
-                  ),
-                ]
-              : [],
+          color: active
+              ? cs.surface
+              : Colors
+                  .transparent, // неактивные полностью прозрачны, blur виден!
+          borderRadius: BorderRadius.circular(AppTheme.menuButtonRadius),
           border: Border.all(
-            color: active
-                ? AppColors.orange
-                : AppColors.whitegrey.withOpacity(0.22),
-            width: 1.2,
+            color: active ? cs.primary : cs.outlineVariant.withOpacity(0.36),
+            width: active ? 2 : 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Эмодзи с нижним паддингом, чтобы не было обрезания
             Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                emoji,
-                style: const TextStyle(
-                  fontSize: 20,
-                  height: 1.0,
-                ),
-              ),
+              padding: const EdgeInsets.only(bottom: 1),
+              child: emojiWidget,
             ),
             const SizedBox(width: 5),
             Text(
               text,
-              style: AppStyles.buttonTextStyle.copyWith(
-                fontSize: 15,
-                color: active ? Colors.white : AppColors.black,
-                fontWeight: active ? FontWeight.bold : FontWeight.w600,
+              style: TextStyle(
+                fontSize: AppTheme.menuFontSize,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                color: active ? cs.primary : cs.onSurface,
               ),
             ),
           ],

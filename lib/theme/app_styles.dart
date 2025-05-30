@@ -1,35 +1,6 @@
 import 'package:flutter/material.dart';
-
-class AppColors {
-  static const Color primary = Colors.blue;
-  static const Color green = Color(0xFF11BB8D);
-  static const Color black = Color.fromRGBO(16, 25, 40, 1);
-  static const Color white = Color.fromRGBO(255, 255, 255, 1);
-  static const Color grey = Color.fromRGBO(103, 118, 140, 1);
-  static const Color red = Color.fromRGBO(255, 71, 71, 1);
-  static const Color pink = Color.fromRGBO(255, 71, 193, 1);
-  static const Color orange = Color(0xFFE24949);
-  static const Color whitegrey = Color.fromRGBO(195, 195, 195, 1);
-  static const Color lightGreyDivider = Color(0xFFE0E0E0);
-  static const Color priceTag =
-      Color(0xFF29C17E); // цвет ценника (например, зелёный)
-}
-
-class AppConstants {
-  static const double indent = 10.0;
-
-  static const double padding = 14.0;
-  static const double paddingSmall = 8.0;
-  static const double paddingLarge = 18.0;
-
-  static const double margin = 12.0;
-  static const double marginSmall = 6.0;
-  static const double marginLarge = 16.0;
-
-  static const double baseRadius = 12;
-  static const double cardRadius = 16;
-  static const double cardPadding = 8;
-}
+import 'app_colors.dart';
+import 'app_constants.dart';
 
 class AppStyles {
   static const TextStyle catalogItemTitleStyle = TextStyle(

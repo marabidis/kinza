@@ -35,14 +35,34 @@ class _AnimatedPriceState extends State<AnimatedPrice> {
 
   @override
   Widget build(BuildContext context) {
+    final style = widget.style ?? Theme.of(context).textTheme.titleMedium;
+    // Максимально длинная строка, например, "от 99999 ₽"
+    final maxPriceString =
+        '${widget.showPrefix ? 'от ' : ''}99999 ₽'; // подбери длину под свой магазин
+
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: oldValue, end: widget.value),
       duration: const Duration(milliseconds: 280),
       builder: (context, animatedValue, child) {
-        return Text(
-          '${widget.showPrefix ? 'от ' : ''}${animatedValue.round()} ₽',
-          style: widget.style ?? Theme.of(context).textTheme.titleMedium,
-          textAlign: TextAlign.center,
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // "Призрак" самой длинной строки — для резерва ширины
+            Opacity(
+              opacity: 0.0,
+              child: Text(
+                maxPriceString,
+                style: style,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            // Основной анимируемый текст
+            Text(
+              '${widget.showPrefix ? 'от ' : ''}${animatedValue.round()} ₽',
+              style: style,
+              textAlign: TextAlign.center,
+            ),
+          ],
         );
       },
     );
