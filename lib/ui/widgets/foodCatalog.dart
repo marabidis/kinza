@@ -1,3 +1,4 @@
+// lib/ui/widgets/catalog_item_widget.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -11,12 +12,14 @@ class CatalogItemWidget extends StatefulWidget {
   final bool isSkeleton;
   final VoidCallback? onAddToCart;
   final VoidCallback? onRemoveFromCart;
+  final VoidCallback? onCardTap; // ← добавили
 
   const CatalogItemWidget({
     Key? key,
     this.product,
     this.onAddToCart,
     this.onRemoveFromCart,
+    this.onCardTap,
     this.isChecked = false,
     this.isSkeleton = false,
   }) : super(key: key);
@@ -26,52 +29,58 @@ class CatalogItemWidget extends StatefulWidget {
 }
 
 class _CatalogItemWidgetState extends State<CatalogItemWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _plusScale;
-  late Animation<double> _cardScale;
-  late bool _isInCart;
+    with TickerProviderStateMixin {
+  /* ─── Animations ─────────────────────────────────────────────────── */
+  late final AnimationController _plusCtl = AnimationController(
+    duration: AppTheme.animNormal,
+    vsync: this,
+  );
 
+  late final Animation<double> _plusScale = TweenSequence([
+    TweenSequenceItem(tween: Tween<double>(begin: 1, end: 1.3), weight: 50),
+    TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1), weight: 50),
+  ]).animate(CurvedAnimation(parent: _plusCtl, curve: Curves.easeOut));
+
+  // «утопление» карточки
+  late final AnimationController _pressCtl = AnimationController(
+    duration: AppTheme.animFast,
+    vsync: this,
+    lowerBound: .96,
+    upperBound: 1,
+    value: 1,
+  );
+
+  late bool _isInCart = widget.isChecked;
+
+  /* ─── Life-cycle ─────────────────────────────────────────────────── */
   @override
-  void initState() {
-    super.initState();
-
-    _isInCart = widget.isChecked;
-
-    _controller = AnimationController(
-      duration: AppTheme.animNormal,
-      vsync: this,
-    );
-
-    _plusScale = TweenSequence([
-      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 1.3), weight: 50),
-      TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1), weight: 50),
-    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
-    _cardScale = TweenSequence([
-      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 1.04), weight: 40),
-      TweenSequenceItem(tween: Tween<double>(begin: 1.04, end: 1), weight: 60),
-    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-  }
-
-  @override
-  void didUpdateWidget(covariant CatalogItemWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isChecked != widget.isChecked) {
-      setState(() {
-        _isInCart = widget.isChecked;
-      });
-    }
+  void didUpdateWidget(covariant CatalogItemWidget old) {
+    super.didUpdateWidget(old);
+    if (old.isChecked != widget.isChecked) _isInCart = widget.isChecked;
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _plusCtl.dispose();
+    _pressCtl.dispose();
     super.dispose();
   }
 
+  /* ─── Helpers ────────────────────────────────────────────────────── */
+  void _toggleCart() {
+    HapticFeedback.mediumImpact();
+    _plusCtl.forward(from: 0);
+    setState(() => _isInCart = !_isInCart);
+    if (_isInCart) {
+      widget.onAddToCart?.call();
+    } else {
+      widget.onRemoveFromCart?.call();
+    }
+  }
+
+  /* ─── Skeleton ───────────────────────────────────────────────────── */
   Widget _buildSkeleton() {
-    final colorScheme = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       padding: EdgeInsets.all(AppTheme.cardPadding),
@@ -79,9 +88,10 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
       child: Row(
         children: [
           MainSkeletonContainer(
-            width: 96, height: 96, radius: AppTheme.imageRadius,
-            // 👇 Передавай цвет скелетона, если MainSkeletonContainer поддерживает
-            color: colorScheme.surfaceVariant,
+            width: 96,
+            height: 96,
+            radius: AppTheme.imageRadius,
+            color: cs.surfaceVariant,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -95,21 +105,21 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
                     height: 16,
                     radius: 8,
                     margin: const EdgeInsets.only(bottom: 6),
-                    color: colorScheme.surfaceVariant,
+                    color: cs.surfaceVariant,
                   ),
                   MainSkeletonContainer(
                     width: 160,
                     height: 12,
                     radius: 6,
                     margin: const EdgeInsets.only(bottom: 6),
-                    color: colorScheme.surfaceVariant,
+                    color: cs.surfaceVariant,
                   ),
                   MainSkeletonContainer(
                     width: 100,
                     height: 12,
                     radius: 6,
                     margin: const EdgeInsets.only(bottom: 12),
-                    color: colorScheme.surfaceVariant,
+                    color: cs.surfaceVariant,
                   ),
                   Row(
                     children: [
@@ -117,14 +127,14 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
                         width: 56,
                         height: 22,
                         radius: 7,
-                        color: colorScheme.surfaceVariant,
+                        color: cs.surfaceVariant,
                       ),
                       const Spacer(),
                       MainSkeletonContainer(
                         width: 28,
                         height: 28,
                         rounded: true,
-                        color: colorScheme.surfaceVariant,
+                        color: cs.surfaceVariant,
                       ),
                     ],
                   ),
@@ -137,28 +147,9 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     );
   }
 
-  Widget _buildPhotoWithMark() {
-    final mark = widget.product?.mark;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        _buildImage(),
-        if (mark == 'острая')
-          Positioned(
-            top: 0,
-            left: 0,
-            child: Image.asset(
-              'assets/ostray_perez.png',
-              width: 60,
-              height: 60,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildImage() {
-    final colorScheme = Theme.of(context).colorScheme;
+  /* ─── Image ─────────────────────────────────────────────────────── */
+  Widget _productImage() {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       width: 96,
       height: 96,
@@ -166,7 +157,7 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
         borderRadius: BorderRadius.circular(AppTheme.imageRadius),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.08),
+            color: cs.shadow.withOpacity(.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -177,125 +168,137 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
         child: CachedNetworkImage(
           imageUrl:
               widget.product?.imageUrl?.thumbnailUrl ?? 'placeholder_image_url',
-          placeholder: (context, url) => MainSkeletonContainer(
+          placeholder: (_, __) => MainSkeletonContainer(
               width: 96,
               height: 96,
               radius: AppTheme.imageRadius,
-              color: colorScheme.surfaceVariant),
-          errorWidget: (context, url, error) =>
-              const Icon(Icons.error, size: 64),
+              color: cs.surfaceVariant),
+          errorWidget: (_, __, ___) => const Icon(Icons.error, size: 64),
           fit: BoxFit.cover,
         ),
       ),
     );
   }
 
-  void _handlePlusMinusTap() {
-    HapticFeedback.mediumImpact();
-    _controller.forward(from: 0);
-    setState(() {
-      _isInCart = !_isInCart;
-    });
-    if (_isInCart) {
-      widget.onAddToCart?.call();
-    } else {
-      widget.onRemoveFromCart?.call();
-    }
-  }
-
+  /* ─── Build ─────────────────────────────────────────────────────── */
   @override
   Widget build(BuildContext context) {
-    if (widget.isSkeleton) {
-      return _buildSkeleton();
-    }
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    if (widget.isSkeleton) return _buildSkeleton();
 
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _cardScale.value,
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            padding: EdgeInsets.all(AppTheme.cardPadding),
-            decoration: AppTheme.cardDecoration(context),
-            child: Row(
-              children: [
-                _buildPhotoWithMark(),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.product?.title ?? "",
-                          style: textTheme.titleMedium?.copyWith(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurface,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.product?.description ?? "",
-                          style: textTheme.bodySmall?.copyWith(
-                            fontSize: 12,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 7),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 13, vertical: 7),
-                              decoration: AppTheme.priceTagDecoration(context),
-                              child: Text(
-                                widget.product != null
-                                    ? '${widget.product!.isWeightBased == true ? "от " : ""}${widget.product!.price}₽'
-                                    : '',
-                                style: textTheme.labelLarge?.copyWith(
-                                  color: colorScheme.onSurface,
+    final cs = Theme.of(context).colorScheme;
+    final txt = Theme.of(context).textTheme;
+    final mark = widget.product?.mark;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _pressCtl.reverse(), // 1 → 0.96
+      onTapCancel: () => _pressCtl.forward(), // вернёмся к 1
+      onTapUp: (_) {
+        HapticFeedback.selectionClick(); // <--- вот сюда добавил вибрацию!
+        _pressCtl.forward();
+        widget.onCardTap?.call(); // открыть деталь
+      },
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_plusCtl, _pressCtl]),
+        builder: (context, _) {
+          return Transform.scale(
+            scale: _pressCtl.value, // утопление
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              padding: EdgeInsets.all(AppTheme.cardPadding),
+              decoration: AppTheme.cardDecoration(context),
+              child: Row(
+                children: [
+                  _productImage(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          /* ── Название + иконка ── */
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  widget.product?.title ?? '',
+                                  style: txt.titleMedium?.copyWith(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: cs.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                            ),
-                            const Spacer(),
-                            Transform.scale(
-                              scale: _plusScale.value,
-                              child: IconButton(
-                                icon: Icon(
-                                  _isInCart
-                                      ? Icons.remove_circle_outline
-                                      : Icons.add_circle_outline,
-                                  color: _isInCart
-                                      ? colorScheme.error
-                                      : colorScheme.primary,
+                              if (mark == 'острая')
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 4),
+                                  child: Image.asset(
+                                    'assets/ostray_perez.png',
+                                    width: 21,
+                                    height: 21,
+                                  ),
                                 ),
-                                splashRadius: AppTheme.iconButtonSplashRadius,
-                                onPressed: _handlePlusMinusTap,
-                                tooltip: _isInCart
-                                    ? 'Удалить из корзины'
-                                    : 'Добавить в корзину',
-                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.product?.description ?? '',
+                            style: txt.bodySmall?.copyWith(
+                              fontSize: 12.5,
+                              color: cs.onSurfaceVariant,
                             ),
-                          ],
-                        ),
-                      ],
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 7),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 13, vertical: 7),
+                                decoration:
+                                    AppTheme.priceTagDecoration(context),
+                                child: Text(
+                                  widget.product != null
+                                      ? '${(widget.product!.isWeightBased ?? false) ? "от " : ""}${widget.product!.price}₽'
+                                      : '',
+                                  style: txt.labelLarge
+                                      ?.copyWith(color: cs.onSurface),
+                                ),
+                              ),
+                              const Spacer(),
+                              Transform.scale(
+                                scale: _plusScale.value,
+                                child: IconButton(
+                                  icon: Icon(
+                                    _isInCart
+                                        ? Icons.remove_circle_outline
+                                        : Icons.add_circle_outline,
+                                    color: _isInCart ? cs.error : cs.primary,
+                                  ),
+                                  splashRadius: AppTheme.iconButtonSplashRadius,
+                                  onPressed: _toggleCart,
+                                  tooltip: _isInCart
+                                      ? 'Удалить из корзины'
+                                      : 'Добавить в корзину',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

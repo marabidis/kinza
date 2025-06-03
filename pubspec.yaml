@@ -13,7 +13,7 @@ flutter:
     - assets/sad_kitten_white_bg.png
     - assets/ostray_perez.png
     - assets/.env
-    - assets/success_order_kinza_white_bg.png
+    - assets/success_order.webp
     
 
 dependencies:

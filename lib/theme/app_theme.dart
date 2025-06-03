@@ -110,7 +110,7 @@ class AppTheme {
       ),
       bodySmall: TextStyle(
         fontSize: 14,
-        color: gray500,
+        color: Color.fromARGB(255, 75, 80, 87),
       ),
       labelLarge: TextStyle(
         fontSize: priceTagFontSize,

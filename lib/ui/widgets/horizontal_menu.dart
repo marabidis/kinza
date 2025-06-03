@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_kinza/theme/app_theme.dart';
+import 'package:flutter/services.dart';
 
 class HorizontalMenu extends StatefulWidget {
   final List<String> categories;
@@ -33,6 +34,8 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
   @override
   void didUpdateWidget(covariant HorizontalMenu oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Аккуратно! Только если категория сменилась через scroll вертикального списка,
+    // тогда доцентровываем выбранную кнопку (автоматически)
     if (widget.activeCategory != oldWidget.activeCategory) {
       SchedulerBinding.instance
           .addPostFrameCallback((_) => _ensureActiveVisible());
@@ -77,6 +80,7 @@ class _HorizontalMenuState extends State<HorizontalMenu> {
                   emoji: HorizontalMenu._emojis[cat] ?? '',
                   text: cat,
                   active: cat == widget.activeCategory,
+                  // onTap только смена категории, без ensureVisible
                   onTap: () => widget.onCategoryChanged(cat),
                 );
               },
@@ -140,7 +144,10 @@ class _MenuButton extends StatelessWidget {
           );
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick(); // вот здесь!
+        onTap();
+      },
       child: AnimatedContainer(
         duration: AppTheme.animFast,
         padding: EdgeInsets.symmetric(

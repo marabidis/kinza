@@ -1,20 +1,23 @@
+// lib/ui/screens/orders/success_order_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_kinza/styles/1app_constants.dart';
-
-import 'package:flutter_kinza/theme/app_colors.dart';
-import 'package:flutter_kinza/theme/app_styles.dart';
-import 'package:flutter_kinza/theme/app_constants.dart';
+import 'package:flutter_kinza/theme/app_theme.dart'; // Импорт AppTheme для фирменных цветов
 
 class SuccessOrderPage extends StatelessWidget {
   final int orderNumber;
 
-  const SuccessOrderPage({required this.orderNumber});
+  const SuccessOrderPage({required this.orderNumber, Key? key})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final txt = Theme.of(context).textTheme;
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white, // тот же белый фон
+      backgroundColor: cs.background,
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -23,73 +26,73 @@ class SuccessOrderPage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Белый круг с тенью — размеры как в EmptyCartScreen
+                // Круглая картинка на фоне карточки темы
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white,
+                    color: cs.surface,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.07),
+                        color: cs.shadow.withOpacity(0.12),
                         blurRadius: 28,
-                        offset: Offset(0, 10),
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
-                  padding: EdgeInsets.all(40), // Синхронизирован с корзиной
+                  padding: const EdgeInsets.all(40),
                   child: Image.asset(
-                    'assets/success_order_kinza_white_bg.png',
-                    width: 170, // Точно так же как в корзине
+                    dark
+                        ? 'assets/success_order.webp'
+                        : 'assets/success_order.webp',
+                    width: 170,
                     height: 170,
                     fit: BoxFit.contain,
                   ),
                 ),
-                SizedBox(height: 36),
+                const SizedBox(height: 36),
                 Text(
                   'Заказ №$orderNumber оформлен! 👌🏽',
-                  style: AppStyles.subtitleTextStyle.copyWith(
+                  style: txt.titleLarge?.copyWith(
                     fontSize: 21,
                     fontWeight: FontWeight.w800,
+                    color: cs.onSurface,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 14),
+                const SizedBox(height: 14),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
                   child: Text(
                     'Скоро наш администратор свяжется с вами для уточнения деталей.',
-                    style: AppStyles.bodyTextStyle.copyWith(
-                      color: const Color(0xFF67768C),
+                    style: txt.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ),
-                SizedBox(height: 36),
+                const SizedBox(height: 36),
                 SizedBox(
                   width: double.infinity,
-                  height: 44, // Точно как в EmptyCartScreen
+                  height: 44,
                   child: ElevatedButton(
                     onPressed: () {
                       HapticFeedback.mediumImpact();
                       Navigator.popUntil(context, (route) => route.isFirst);
                     },
-                    style: AppStyles.elevatedButtonStyle.copyWith(
-                      backgroundColor:
-                          MaterialStateProperty.all(Color(0xFFFFD600)),
-                      foregroundColor: MaterialStateProperty.all(Colors.black),
-                      shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.yellowAccent, // ЯВНО ЖЁЛТЫЙ
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50),
-                      )),
-                      elevation: MaterialStateProperty.all(0),
-                      padding: MaterialStateProperty.all(
-                        EdgeInsets.symmetric(horizontal: 0, vertical: 0),
                       ),
+                      elevation: 0,
+                      padding: EdgeInsets.zero,
                     ),
                     child: Text(
                       "В меню",
-                      style: AppStyles.buttonTextStyle.copyWith(
+                      style: txt.labelLarge?.copyWith(
                         color: Colors.black,
                         fontWeight: FontWeight.w700,
                         fontSize: 16,

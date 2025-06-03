@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_kinza/ui/widgets/cart/cart_item_widget.dart';
 import 'package:flutter_kinza/ui/widgets/cart/empty_cart_screen.dart';
+import 'package:flutter_kinza/ui/widgets/foodCatalog.dart';
 import 'package:hive/hive.dart';
 import 'package:flutter_kinza/models/cart_item.dart';
 import '../orders/success_order_page.dart';
@@ -30,17 +31,26 @@ class _CartScreenState extends State<CartScreen> {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   int _lastTotalSum = 0;
 
+  bool _isLoading = true; // добавлено
+
   @override
   void initState() {
     super.initState();
-    cartBox = Hive.box<CartItem>('cartBox');
+    _initCart();
+  }
+
+  Future<void> _initCart() async {
+    cartBox = await Hive.openBox<CartItem>('cartBox');
     _lastTotalSum = getTotalSum(cartBox);
+    setState(() => _isLoading = false);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _lastTotalSum = getTotalSum(cartBox);
+    if (!_isLoading) {
+      _lastTotalSum = getTotalSum(cartBox);
+    }
   }
 
   /*──────────────────────────────────────────────────────────────────────*/
@@ -49,9 +59,44 @@ class _CartScreenState extends State<CartScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    // Скелетон на время загрузки корзины
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: cs.background,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          iconTheme: IconThemeData(color: cs.onSurface),
+          title: Text(
+            'Ваш заказ',
+            style: textTheme.titleLarge
+                ?.copyWith(color: cs.onBackground, fontWeight: FontWeight.w700),
+          ),
+          systemOverlayStyle:
+              dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+          flexibleSpace: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                color: dark
+                    ? Colors.black.withOpacity(.30)
+                    : Colors.white.withOpacity(.25),
+              ),
+            ),
+          ),
+        ),
+        body: ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          itemCount: 5,
+          itemBuilder: (_, __) => const CatalogItemWidget(isSkeleton: true),
+        ),
+      );
+    }
+
     final isEmpty = cartBox.isEmpty;
     final totalSum = getTotalSum(cartBox);
-    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: cs.background,
@@ -349,8 +394,50 @@ class _CartScreenState extends State<CartScreen> {
     final orderNum = await incrementOrderNumber();
     final totalSum = getTotalSum(cartBox);
 
-    // … логика отправки заказа …
+    // --- Формируем текст заказа для Telegram ---
+    final orderDetails = generateOrderDetailsString(
+      orderNum,
+      m,
+      name,
+      phone,
+      addr,
+      comm,
+      cartBox,
+      totalSum,
+      m,
+    );
 
+    // --- СОЗДАЁМ объект Order для Strapi ---
+    final order = Order(
+      orderNumber: orderNum,
+      details: orderDetails,
+      totalPrice: totalSum,
+      shippingAddress: addr ?? '',
+      paymentMethod: m == DeliveryMethod.courier ? 'Курьер' : 'Самовывоз',
+      phone: phone ?? '',
+      timeOrder: DateTime.now(),
+    );
+
+    // --- Отправляем заказ в Strapi ---
+    try {
+      final ok = await OrderService.sendOrderToDatabase(order);
+      if (!ok) {
+        debugPrint("Ошибка при отправке заказа в Strapi!");
+        // Здесь можно показать SnackBar или что-то ещё пользователю
+      }
+    } catch (e) {
+      debugPrint("Exception при отправке заказа в Strapi: $e");
+    }
+
+    // --- Отправляем заказ в Telegram ---
+    try {
+      await sendOrderToTelegram(orderDetails);
+    } catch (e) {
+      debugPrint("Ошибка при отправке заказа в Telegram: $e");
+      // Здесь можно показать SnackBar, если нужно
+    }
+
+    // ... логика перехода на SuccessOrderPage …
     Navigator.push(
       context,
       MaterialPageRoute(
