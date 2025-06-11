@@ -2,17 +2,17 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
-import 'package:kinza/shared/widgets/shimmer.dart';
 import 'package:kinza/core/models/cart_item.dart';
-import 'package:kinza/core/models/product.dart';
+import 'package:kinza/core/models/ingredient_option.dart'; // IngredientOption
+import 'package:kinza/core/models/product.dart' show Product; // Product
 import 'package:kinza/core/theme/app_theme.dart';
+import 'package:kinza/features/cart/presentation/widgets/cart_item_control.dart';
 import 'package:kinza/features/orders/presentation/widgets/glass_sheet_wrapper.dart';
 import 'package:kinza/shared/widgets/animated_price.dart';
-import 'package:kinza/features/cart/presentation/widgets/cart_item_control.dart';
 import 'package:kinza/shared/widgets/my_button.dart';
+import 'package:kinza/shared/widgets/shimmer.dart';
 
-// новый sheet
-import 'ingredient_customize_sheet.dart';
+import 'ingredient_customize_sheet.dart'; // новый sheet
 
 /*───────────────────────────────────────────────────────────────────*/
 class ProductDetailWidget extends StatefulWidget {
@@ -81,7 +81,7 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
         minimumWeight: widget.product.minimumWeight,
       );
 
-  /// Добавляет товар в корзину при первом изменении количества / веса
+  /*────────── корзина ─────────*/
   void _addToCartIfFirstTime() {
     if (!_inCart) {
       widget.onAddToCart();
@@ -110,11 +110,9 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
     widget.onQuantityChanged(v);
 
     if (v > 0) {
-      if (!_inCart) {
-        _addToCartIfFirstTime();
-      } else {
-        widget.updateCartItem(_currentCartItem());
-      }
+      !_inCart
+          ? _addToCartIfFirstTime()
+          : widget.updateCartItem(_currentCartItem());
     }
   }
 
@@ -123,14 +121,13 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
     widget.onWeightChanged(v);
 
     if (v > 0) {
-      if (!_inCart) {
-        _addToCartIfFirstTime();
-      } else {
-        widget.updateCartItem(_currentCartItem());
-      }
+      !_inCart
+          ? _addToCartIfFirstTime()
+          : widget.updateCartItem(_currentCartItem());
     }
   }
 
+  /*────────── модальное окно ─────────*/
   Future<void> _openCustomizeSheet() async {
     final result = await showModalBottomSheet<List<IngredientOption>>(
       context: context,
@@ -158,6 +155,7 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
     }
   }
 
+  /*────────────────────────── UI ──────────────────────────*/
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -287,6 +285,7 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
 /*───────────────────────────────────────────────────────────────────*/
 class _HeaderImage extends StatelessWidget {
   const _HeaderImage({required this.product});
+
   final Product product;
 
   @override
@@ -294,21 +293,15 @@ class _HeaderImage extends StatelessWidget {
     final hash = product.blurHash.isNotEmpty ? product.blurHash : null;
     final url =
         product.imageUrl?.mediumUrl ?? 'https://via.placeholder.com/600';
-    final cs = Theme.of(context).colorScheme;
+
     return AspectRatio(
       aspectRatio: 1,
       child: CachedNetworkImage(
         imageUrl: url,
         fit: BoxFit.cover,
-        placeholder: (_, __) {
-          if (hash != null) return Positioned.fill(child: BlurHash(hash: hash));
-          return const Shimmer(
-            size: Size(
-              double.infinity,
-              double.maxFinite,
-            ),
-          );
-        },
+        placeholder: (_, __) => hash != null
+            ? SizedBox.expand(child: BlurHash(hash: hash))
+            : const Shimmer(size: Size(double.infinity, double.maxFinite)),
         errorWidget: (_, __, ___) => const Icon(Icons.broken_image_rounded,
             size: 64, color: Colors.grey),
       ),
@@ -318,11 +311,12 @@ class _HeaderImage extends StatelessWidget {
 
 /*───────────────────────────────────────────────────────────────────*/
 class _ButtonsBlock extends StatelessWidget {
-  const _ButtonsBlock(
-      {required this.isInCart,
-      required this.totalPrice,
-      required this.cartControl,
-      required this.onMainButtonTap});
+  const _ButtonsBlock({
+    required this.isInCart,
+    required this.totalPrice,
+    required this.cartControl,
+    required this.onMainButtonTap,
+  });
 
   final bool isInCart;
   final double totalPrice;
@@ -333,22 +327,28 @@ class _ButtonsBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 13),
       decoration: BoxDecoration(
-          color: dark
-              ? Colors.black.withOpacity(.35)
-              : Colors.white.withOpacity(.30),
-          borderRadius: BorderRadius.circular(14)),
+        color: dark
+            ? Colors.black.withOpacity(.35)
+            : Colors.white.withOpacity(.30),
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Row(
         children: [
           Expanded(
-              child: AnimatedPrice(
-                  value: totalPrice,
-                  showPrefix: false,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800, color: cs.onSurface))),
+            child: AnimatedPrice(
+              value: totalPrice,
+              showPrefix: false,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w800, color: cs.onSurface),
+            ),
+          ),
           const SizedBox(width: 12),
           cartControl,
           const SizedBox(width: 12),

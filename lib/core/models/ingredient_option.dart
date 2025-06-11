@@ -1,5 +1,3 @@
-// lib/models/ingredient_option.dart
-
 import 'ingredient.dart';
 
 class IngredientOption {
@@ -12,7 +10,7 @@ class IngredientOption {
   final int addPrice;
   final int doublePrice;
 
-  IngredientOption({
+  const IngredientOption({
     required this.id,
     required this.ingredient,
     required this.canRemove,
@@ -33,8 +31,6 @@ class IngredientOption {
     } else if (attrs['ingredients']?['data'] is List &&
         (attrs['ingredients']['data'] as List).isNotEmpty) {
       ingredientData = (attrs['ingredients']['data'] as List).first;
-    } else {
-      ingredientData = null;
     }
 
     return IngredientOption(
@@ -50,4 +46,16 @@ class IngredientOption {
       doublePrice: attrs['doublePrice'] ?? 0,
     );
   }
+
+  /// Для сериализации в JSON / отображения
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'ingredient': ingredient.toMap(),
+        'canRemove': canRemove,
+        'canAdd': canAdd,
+        'canDouble': canDouble,
+        'isDefault': isDefault,
+        'addPrice': addPrice,
+        'doublePrice': doublePrice,
+      };
 }

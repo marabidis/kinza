@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
 import 'package:kinza/core/services/api_client.dart';
 import 'package:kinza/features/orders/presentation/screens/home_screen.dart';
+
+import '../widgets/dots_loader.dart';
 
 /// Экран-заставка с логотипом и бегущими точками.
 /// После [duration] переходим на HomeScreen.
@@ -75,4 +76,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-

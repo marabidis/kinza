@@ -2,16 +2,15 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kinza/core/constants/config.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:timezone/data/latest.dart' as tz;
-
+import 'package:kinza/core/constants/config.dart';
 import 'package:kinza/core/models/cart_item.dart';
 import 'package:kinza/core/services/api_client.dart';
 import 'package:kinza/core/theme/app_theme.dart';
 import 'package:kinza/core/theme/themed_system_ui.dart';
 import 'package:kinza/features/splash/presentation/screens/splash_screen.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
