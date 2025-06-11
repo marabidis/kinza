@@ -1,10 +1,11 @@
 // lib/ui/widgets/catalog_item_widget.dart
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_kinza/models/product.dart';
-import 'main_skeleton_container.dart';
 import 'package:flutter_kinza/theme/app_theme.dart';
+
+import 'main_skeleton_container.dart';
 
 class CatalogItemWidget extends StatefulWidget {
   final Product? product;
@@ -31,26 +32,40 @@ class CatalogItemWidget extends StatefulWidget {
 class _CatalogItemWidgetState extends State<CatalogItemWidget>
     with TickerProviderStateMixin {
   /* ─── Animations ─────────────────────────────────────────────────── */
-  late final AnimationController _plusCtl = AnimationController(
-    duration: AppTheme.animNormal,
-    vsync: this,
-  );
+  late final AnimationController _plusCtl;
 
-  late final Animation<double> _plusScale = TweenSequence([
-    TweenSequenceItem(tween: Tween<double>(begin: 1, end: 1.3), weight: 50),
-    TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1), weight: 50),
-  ]).animate(CurvedAnimation(parent: _plusCtl, curve: Curves.easeOut));
+  late final Animation<double> _plusScale;
 
   // «утопление» карточки
-  late final AnimationController _pressCtl = AnimationController(
-    duration: AppTheme.animFast,
-    vsync: this,
-    lowerBound: .96,
-    upperBound: 1,
-    value: 1,
-  );
+  late final AnimationController _pressCtl;
 
-  late bool _isInCart = widget.isChecked;
+  bool _isInCart = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _isInCart = widget.isChecked;
+
+    _plusCtl = AnimationController(
+      duration: AppTheme.animNormal,
+      vsync: this,
+    );
+
+    _plusScale = TweenSequence([
+      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 1.3), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1), weight: 50),
+    ]).animate(CurvedAnimation(parent: _plusCtl, curve: Curves.easeOut));
+
+    // «утопление» карточки
+    _pressCtl = AnimationController(
+      duration: AppTheme.animFast,
+      vsync: this,
+      lowerBound: .96,
+      upperBound: 1,
+      value: 1,
+    );
+  }
 
   /* ─── Life-cycle ─────────────────────────────────────────────────── */
   @override
@@ -83,7 +98,7 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     final cs = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      padding: EdgeInsets.all(AppTheme.cardPadding),
+      padding: const EdgeInsets.all(AppTheme.cardPadding),
       decoration: AppTheme.cardDecoration(context),
       child: Row(
         children: [
@@ -91,7 +106,7 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
             width: 96,
             height: 96,
             radius: AppTheme.imageRadius,
-            color: cs.surfaceVariant,
+            color: cs.surfaceContainerHighest,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -105,21 +120,21 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
                     height: 16,
                     radius: 8,
                     margin: const EdgeInsets.only(bottom: 6),
-                    color: cs.surfaceVariant,
+                    color: cs.surfaceContainerHighest,
                   ),
                   MainSkeletonContainer(
                     width: 160,
                     height: 12,
                     radius: 6,
                     margin: const EdgeInsets.only(bottom: 6),
-                    color: cs.surfaceVariant,
+                    color: cs.surfaceContainerHighest,
                   ),
                   MainSkeletonContainer(
                     width: 100,
                     height: 12,
                     radius: 6,
                     margin: const EdgeInsets.only(bottom: 12),
-                    color: cs.surfaceVariant,
+                    color: cs.surfaceContainerHighest,
                   ),
                   Row(
                     children: [
@@ -127,14 +142,14 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
                         width: 56,
                         height: 22,
                         radius: 7,
-                        color: cs.surfaceVariant,
+                        color: cs.surfaceContainerHighest,
                       ),
                       const Spacer(),
                       MainSkeletonContainer(
                         width: 28,
                         height: 28,
                         rounded: true,
-                        color: cs.surfaceVariant,
+                        color: cs.surfaceContainerHighest,
                       ),
                     ],
                   ),
@@ -172,7 +187,7 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
               width: 96,
               height: 96,
               radius: AppTheme.imageRadius,
-              color: cs.surfaceVariant),
+              color: cs.surfaceContainerHighest),
           errorWidget: (_, __, ___) => const Icon(Icons.error, size: 64),
           fit: BoxFit.cover,
         ),
@@ -205,7 +220,7 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
             scale: _pressCtl.value, // утопление
             child: Container(
               margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-              padding: EdgeInsets.all(AppTheme.cardPadding),
+              padding: const EdgeInsets.all(AppTheme.cardPadding),
               decoration: AppTheme.cardDecoration(context),
               child: Row(
                 children: [

@@ -1,30 +1,35 @@
 import 'dart:convert'; // Импорт для json.encode
+import 'dart:developer';
+
+import 'package:flutter_kinza/common/constants/config.dart';
 import 'package:http/http.dart' as http;
-import '../config.dart' show Config; // Убедитесь, что путь правильный
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+// import '../config.dart' show Config; // Убедитесь, что путь правильный
+// import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiClient {
   final http.Client _client = http.Client();
 
   // Метод для получения списка продуктов
-  Future<http.Response> getProducts(String endpoint,
-      {Map<String, String>? queryParameters}) async {
-    print('[ApiClient] strapiUrl: "${Config.strapiUrl}" endpoint: "$endpoint"');
-    final uri = Uri.parse('${Config.strapiUrl}/api/$endpoint')
+  Future<http.Response> getProducts(
+    String endpoint, {
+    Map<String, String>? queryParameters,
+  }) async {
+    log('[ApiClient] apiBaseUrl: "${Config.apiBaseUrl}" endpoint: "$endpoint"');
+    final uri = Uri.parse('${Config.apiBaseUrl}/$endpoint')
         .replace(queryParameters: queryParameters ?? {});
 
     final response = await _client.get(uri);
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
+    log('Response status: ${response.statusCode}');
+    log('Response body: ${response.body}');
     return response;
   }
 
   // Метод для отправки заказа
   Future<http.Response> sendOrder(
       String endpoint, Map<String, dynamic> body) async {
-    print('[ApiClient] strapiUrl: "${Config.strapiUrl}" endpoint: "$endpoint"');
-    final uri = Uri.parse('${Config.strapiUrl}/api/$endpoint');
-    print('request: ${uri} ${body}');
+    log('[ApiClient] apiBaseUrl: "${Config.apiBaseUrl}" endpoint: "$endpoint"');
+    final uri = Uri.parse('${Config.apiBaseUrl}/$endpoint');
+    log('request: $uri $body');
     final response = await _client.post(
       uri,
       headers: {
@@ -33,22 +38,22 @@ class ApiClient {
       body: json.encode({'data': body}),
     );
 
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
+    log('Response status: ${response.statusCode}');
+    log('Response body: ${response.body}');
     return response;
   }
 
   // Новый метод для получения данных
   Future<http.Response> getData(String endpoint) async {
-    print('[ApiClient] strapiUrl: "${Config.strapiUrl}" endpoint: "$endpoint"');
-    final uri = Uri.parse('${Config.strapiUrl}/api/$endpoint');
+    log('[ApiClient] apiBaseUrl: "${Config.apiBaseUrl}" endpoint: "$endpoint"');
+    final uri = Uri.parse('${Config.apiBaseUrl}/api/$endpoint');
 
     final response = await _client.get(uri, headers: {
       // Вставьте здесь необходимые заголовки, если они нужны
     });
 
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
+    log('Response status: ${response.statusCode}');
+    log('Response body: ${response.body}');
     return response;
   }
 

@@ -1,21 +1,23 @@
+import 'dart:developer';
 import 'dart:ui';
-import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_kinza/models/CatalogFood.dart';
 import 'package:flutter_kinza/models/cart_item.dart';
 import 'package:flutter_kinza/models/product.dart';
-import 'package:flutter_kinza/models/CatalogFood.dart';
 import 'package:flutter_kinza/services/api_client.dart';
-
-import 'package:flutter_kinza/ui/widgets/horizontal_menu.dart';
+import 'package:flutter_kinza/ui/screens/cart/cart_screen.dart';
+import 'package:flutter_kinza/ui/screens/orders/product/glass_sheet_wrapper.dart';
+import 'package:flutter_kinza/ui/screens/orders/product/product_detail_widget.dart';
 import 'package:flutter_kinza/ui/widgets/cart/floating_cart_button.dart';
 import 'package:flutter_kinza/ui/widgets/foodCatalog.dart'; // твой путь!
-import 'package:flutter_kinza/ui/screens/cart/cart_screen.dart';
-import 'package:flutter_kinza/ui/screens/orders/product/product_detail_widget.dart';
-import 'package:flutter_kinza/ui/screens/orders/product/glass_sheet_wrapper.dart';
+import 'package:flutter_kinza/ui/widgets/horizontal_menu.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 const double _ITEM_HEIGHT = 145.0;
+const double _MENU_HEIGHT = 38;
+const double _MENU_TOP_MARGIN = 10;
+const double _MENU_V_SPACING = 8;
 
 class HomeScreen extends StatefulWidget {
   final ApiClient apiClient;
@@ -33,9 +35,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollCtl = ScrollController();
 
   List<Product> _products = [];
-  Map<String, int> _indexMap = {};
+  final Map<String, int> _indexMap = {};
   String? _activeCategory;
   bool _isLoading = true;
+  String? _error;
 
   final List<String> _categories = [
     'Пицца',
@@ -44,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
     'К блюду',
   ];
 
-  // ← Новый флаг для скролла по кнопке
   bool _isCategoryScrolling = false;
 
   @override
@@ -56,29 +58,36 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initialize() async {
-    _cartBox = await Hive.openBox<CartItem>('cartBox');
+    try {
+      _cartBox = await Hive.openBox<CartItem>('cartBox');
 
-    // загрузка каталога
-    final temp = <Product>[];
-    for (final cat in _categories) {
-      temp.addAll(await _foodRepo.fetchFoodItemsByCategory(cat));
-    }
-    final uniq = <String, Product>{};
-    for (final p in temp) {
-      uniq[p.id.toString()] = p;
-    }
-    _products = uniq.values.toList()
-      ..sort((a, b) => _categories
-          .indexOf(a.category)
-          .compareTo(_categories.indexOf(b.category)));
+      final temp = <Product>[];
+      for (final cat in _categories) {
+        final foods = await _foodRepo.fetchFoodItemsByCategory(cat);
+        temp.addAll(foods);
+      }
+      final uniq = <String, Product>{};
+      for (final p in temp) {
+        uniq[p.id.toString()] = p;
+      }
+      _products = uniq.values.toList()
+        ..sort((a, b) => _categories
+            .indexOf(a.category)
+            .compareTo(_categories.indexOf(b.category)));
 
-    _activeCategory = _categories.first;
-    for (var i = 0; i < _products.length; i++) {
-      // Важно: запомнить только первое вхождение каждой категории!
-      _indexMap.putIfAbsent(_products[i].category, () => i);
+      _activeCategory = _categories.first;
+      for (var i = 0; i < _products.length; i++) {
+        _indexMap.putIfAbsent(_products[i].category, () => i);
+      }
+      _error = null;
+      setState(() => _isLoading = false);
+    } on Object catch (e, st) {
+      log('ERROR: ${e.toString()}, stacktrace: $st');
+      setState(() {
+        _isLoading = false;
+        _error = e.toString();
+      });
     }
-
-    setState(() => _isLoading = false);
   }
 
   @override
@@ -107,7 +116,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final idx = _indexMap[cat];
     if (idx == null) return;
 
-    // Считаем максимальный scroll extent, чтобы не выходить за пределы
     double target = idx * _ITEM_HEIGHT;
     double maxScroll = _scrollCtl.hasClients
         ? _scrollCtl.position.maxScrollExtent
@@ -123,7 +131,6 @@ class _HomeScreenState extends State<HomeScreen> {
       curve: Curves.easeOut,
     )
         .then((_) {
-      // Даем небольшой буфер, чтобы гарантировать, что scroll завершился
       Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) _isCategoryScrolling = false;
       });
@@ -139,10 +146,33 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, snap) {
         final theme = Theme.of(context);
         final topInset = MediaQuery.of(context).padding.top;
-        final menuTop = topInset + 10;
-        final contentTop = menuTop + 38 + 8;
+        final menuTop = topInset + _MENU_TOP_MARGIN;
+        final contentTop = menuTop + _MENU_HEIGHT + _MENU_V_SPACING;
 
-        // Скелетоны-карточки, пока грузим
+        if (_error != null) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Ошибка: $_error'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _isLoading = true;
+                        _error = null;
+                        _initFuture = _initialize();
+                      });
+                    },
+                    child: const Text('Повторить попытку'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         if (snap.connectionState != ConnectionState.done || _isLoading) {
           return Scaffold(
             backgroundColor: theme.scaffoldBackgroundColor,
@@ -157,122 +187,96 @@ class _HomeScreenState extends State<HomeScreen> {
                         const CatalogItemWidget(isSkeleton: true),
                   ),
                 ),
-                // стекло под меню
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                      child: Container(
-                        height: contentTop,
-                        color: theme.brightness == Brightness.dark
-                            ? Colors.black.withOpacity(.22)
-                            : Colors.white.withOpacity(.18),
-                      ),
-                    ),
-                  ),
-                ),
-                // меню
-                Positioned(
-                  top: menuTop,
-                  left: 10,
-                  right: 10,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(11),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                      child: Container(
-                        height: 38,
-                        color: Colors.transparent,
-                        child: HorizontalMenu(
-                          categories: _categories,
-                          activeCategory: _activeCategory,
-                          onCategoryChanged: _onCategoryTap,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                _buildMenuBackground(theme, contentTop),
+                _buildMenuBar(menuTop),
               ],
             ),
           );
         }
 
-        // Основной экран — товары
-        return Scaffold(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          floatingActionButton: _buildFab(),
-          body: Stack(
-            children: [
-              // список товаров
-              Padding(
-                padding: EdgeInsets.only(top: contentTop),
-                child: ListView.builder(
-                  controller: _scrollCtl,
-                  itemCount: _products.length,
-                  padding: const EdgeInsets.only(bottom: 60),
-                  itemBuilder: (ctx, i) {
-                    final p = _products[i];
-                    final inCart = _cartBox.containsKey(p.id.toString());
-                    return CatalogItemWidget(
-                      product: p,
-                      isChecked: inCart,
-                      onAddToCart: () => _toggleCart(p),
-                      onRemoveFromCart: () => _toggleCart(p),
-                      onCardTap: () => _openDetail(p),
-                    );
-                  },
-                ),
-              ),
-              // стекло под меню
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: Container(
-                      height: contentTop,
-                      color: theme.brightness == Brightness.dark
-                          ? Colors.black.withOpacity(.22)
-                          : Colors.white.withOpacity(.18),
+        // Теперь рендерим экран с корзиной через ValueListenableBuilder (только здесь!)
+        return ValueListenableBuilder<Box<CartItem>>(
+          valueListenable: _cartBox.listenable(),
+          builder: (context, box, _) {
+            return Scaffold(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              floatingActionButton: _buildFab(box),
+              body: Stack(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(top: contentTop),
+                    child: ListView.builder(
+                      controller: _scrollCtl,
+                      itemCount: _products.length,
+                      padding: const EdgeInsets.only(bottom: 60),
+                      itemBuilder: (ctx, i) {
+                        final p = _products[i];
+                        final inCart = box.containsKey(p.id.toString());
+                        return CatalogItemWidget(
+                          product: p,
+                          isChecked: inCart,
+                          onAddToCart: () => _toggleCart(p, box),
+                          onRemoveFromCart: () => _toggleCart(p, box),
+                          onCardTap: () => _openDetail(p, box),
+                        );
+                      },
                     ),
                   ),
-                ),
+                  _buildMenuBackground(theme, contentTop),
+                  _buildMenuBar(menuTop),
+                ],
               ),
-              // меню
-              Positioned(
-                top: menuTop,
-                left: 10,
-                right: 10,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(11),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      height: 38,
-                      color: Colors.transparent,
-                      child: HorizontalMenu(
-                        categories: _categories,
-                        activeCategory: _activeCategory,
-                        onCategoryChanged: _onCategoryTap,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildFab() {
-    final count = _cartBox.values.fold<int>(0, (sum, e) => sum + e.quantity);
+  Widget _buildMenuBackground(ThemeData theme, double contentTop) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            height: contentTop,
+            color: theme.brightness == Brightness.dark
+                ? Colors.black.withOpacity(.22)
+                : Colors.white.withOpacity(.18),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuBar(double menuTop) {
+    return Positioned(
+      top: menuTop,
+      left: 10,
+      right: 10,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            height: _MENU_HEIGHT,
+            color: Colors.transparent,
+            child: HorizontalMenu(
+              categories: _categories,
+              activeCategory: _activeCategory,
+              onCategoryChanged: _onCategoryTap,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFab(Box<CartItem> box) {
+    final count = box.values.fold<int>(0, (sum, e) => sum + e.quantity);
     return FloatingCartButton(
       itemCount: count,
       onPressed: () => Navigator.push(
@@ -282,12 +286,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _toggleCart(Product p, [int qty = 1]) async {
+  Future<void> _toggleCart(Product p, Box<CartItem> box, [int qty = 1]) async {
     final key = p.id.toString();
-    if (_cartBox.containsKey(key)) {
-      await _cartBox.delete(key);
+    if (box.containsKey(key)) {
+      await box.delete(key);
     } else {
-      await _cartBox.put(
+      await box.put(
         key,
         CartItem(
           id: key,
@@ -301,11 +305,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-    setState(() {});
+    // Не нужен setState — ValueListenableBuilder обновит UI!
   }
 
-  void _openDetail(Product p) {
-    final ci = _cartBox.get(p.id.toString());
+  void _openDetail(Product p, Box<CartItem> box) {
+    final ci = box.get(p.id.toString());
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -314,15 +318,37 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (_) => GlassSheetWrapper(
         child: ProductDetailWidget(
           product: p,
-          isInCart: _cartBox.containsKey(p.id.toString()),
+          isInCart: box.containsKey(p.id.toString()),
           initialQuantity: ci?.quantity ?? 1,
           initialWeight: ci?.weight ?? .4,
-          onAddToCart: () => _toggleCart(p),
-          onQuantityChanged: (q) => _toggleCart(p),
-          onWeightChanged: (w) => _toggleCart(p),
+          onAddToCart: () => _toggleCart(p, box),
+          onQuantityChanged: (q) {
+            final key = p.id.toString();
+            if (box.containsKey(key)) {
+              final existing = box.get(key);
+              if (existing != null) {
+                box.put(
+                  key,
+                  existing.copyWith(quantity: q),
+                );
+              }
+            }
+          },
+          onWeightChanged: (w) {
+            final key = p.id.toString();
+            if (box.containsKey(key)) {
+              final existing = box.get(key);
+              if (existing != null) {
+                box.put(
+                  key,
+                  existing.copyWith(weight: w),
+                );
+              }
+            }
+          },
           onCartStateChanged: () => setState(() {}),
-          updateCartItem: (ci) => _cartBox.put(ci.id, ci),
-          removeCartItem: (id) => _cartBox.delete(id),
+          updateCartItem: (ci) => box.put(ci.id, ci),
+          removeCartItem: (id) => box.delete(id),
           onItemAdded: () {},
         ),
       ),

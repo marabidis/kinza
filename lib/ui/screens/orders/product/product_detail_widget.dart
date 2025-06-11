@@ -2,14 +2,19 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
+import 'package:flutter_kinza/common/widgets/shimmer.dart';
 import 'package:flutter_kinza/models/cart_item.dart';
 import 'package:flutter_kinza/models/product.dart';
+import 'package:flutter_kinza/theme/app_theme.dart';
+import 'package:flutter_kinza/ui/screens/orders/product/glass_sheet_wrapper.dart';
 import 'package:flutter_kinza/ui/widgets/animated_price.dart';
 import 'package:flutter_kinza/ui/widgets/cart/cart_item_control.dart';
 import 'package:flutter_kinza/ui/widgets/my_button.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:flutter_kinza/theme/app_theme.dart';
 
+// новый sheet
+import 'ingredient_customize_sheet.dart';
+
+/*───────────────────────────────────────────────────────────────────*/
 class ProductDetailWidget extends StatefulWidget {
   const ProductDetailWidget({
     super.key,
@@ -27,7 +32,7 @@ class ProductDetailWidget extends StatefulWidget {
   });
 
   final Product product;
-  final VoidCallback onAddToCart; // HomeScreen._toggleCart
+  final VoidCallback onAddToCart;
   final VoidCallback onCartStateChanged;
   final bool isInCart;
   final int initialQuantity;
@@ -35,7 +40,7 @@ class ProductDetailWidget extends StatefulWidget {
   final ValueChanged<int> onQuantityChanged;
   final ValueChanged<double> onWeightChanged;
   final VoidCallback onItemAdded;
-  final Function(CartItem) updateCartItem; // cartBox.put(...)
+  final Function(CartItem) updateCartItem;
   final Function(String) removeCartItem;
 
   @override
@@ -48,6 +53,9 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
   late int _qty;
   late double _weight;
 
+  int _extraPrice = 0;
+  List<IngredientOption> _selected = [];
+
   @override
   void initState() {
     super.initState();
@@ -56,16 +64,16 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
     _weight = widget.initialWeight;
   }
 
-  /*──────── helpers ───────────────────────────────────────────────*/
   bool get _isWeightBased => widget.product.isWeightBased ?? false;
   double get _unitPrice => widget.product.price.toDouble();
   double get _totalPrice =>
-      _isWeightBased ? _unitPrice * _weight * 10 : _unitPrice * _qty;
+      (_isWeightBased ? _unitPrice * _weight * 10 : _unitPrice * _qty) +
+      _extraPrice;
 
   CartItem _currentCartItem() => CartItem(
         id: widget.product.id.toString(),
         title: widget.product.title,
-        price: widget.product.price,
+        price: (_unitPrice + _extraPrice).toInt(),
         quantity: _qty,
         weight: _weight,
         thumbnailUrl: widget.product.imageUrl?.url,
@@ -73,110 +81,187 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
         minimumWeight: widget.product.minimumWeight,
       );
 
-  /*──────── main toggle ───────────────────────────────────────────*/
+  /// Добавляет товар в корзину при первом изменении количества / веса
+  void _addToCartIfFirstTime() {
+    if (!_inCart) {
+      widget.onAddToCart();
+      widget.updateCartItem(_currentCartItem());
+      widget.onItemAdded();
+      setState(() => _inCart = true);
+      widget.onCartStateChanged();
+    }
+  }
+
   void _toggleCartState() {
     HapticFeedback.mediumImpact();
-
     if (_inCart) {
-      // Удаляем
       widget.removeCartItem(widget.product.id.toString());
     } else {
-      // Сначала «добавить» через HomeScreen._toggleCart
-      widget.onAddToCart(); // теперь позиция точно в box
-      // А затем — обновить её правильным qty/weight
+      widget.onAddToCart();
       widget.updateCartItem(_currentCartItem());
       widget.onItemAdded();
     }
-
     setState(() => _inCart = !_inCart);
     widget.onCartStateChanged();
   }
 
-  /*──────── live-обновления qty / weight ──────────────────────────*/
   void _updateQuantity(int v) {
     setState(() => _qty = v);
     widget.onQuantityChanged(v);
-    if (_inCart) widget.updateCartItem(_currentCartItem());
+
+    if (v > 0) {
+      if (!_inCart) {
+        _addToCartIfFirstTime();
+      } else {
+        widget.updateCartItem(_currentCartItem());
+      }
+    }
   }
 
   void _updateWeight(double v) {
     setState(() => _weight = v);
     widget.onWeightChanged(v);
-    if (_inCart) widget.updateCartItem(_currentCartItem());
+
+    if (v > 0) {
+      if (!_inCart) {
+        _addToCartIfFirstTime();
+      } else {
+        widget.updateCartItem(_currentCartItem());
+      }
+    }
   }
 
-  /*──────── UI ───────────────────────────────────────────────────*/
+  Future<void> _openCustomizeSheet() async {
+    final result = await showModalBottomSheet<List<IngredientOption>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black54,
+      builder: (_) => GlassSheetWrapper(
+        child: IngredientCustomizeSheet(
+          options: widget.product.ingredientOptions,
+          initiallySelected: _selected,
+          sheetTitle: widget.product.title,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selected = result;
+        _extraPrice = _selected.fold<int>(
+          0,
+          (sum, o) => sum + (o.canDouble ? o.doublePrice : o.addPrice),
+        );
+      });
+      if (_inCart) widget.updateCartItem(_currentCartItem());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final txt = Theme.of(context).textTheme;
     final isL = Theme.of(context).brightness == Brightness.light;
 
+    final baseOptions =
+        widget.product.ingredientOptions.where((o) => o.isDefault).toList();
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── фото ──
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-            child: _HeaderImage(product: widget.product),
-          ),
+          _HeaderImage(product: widget.product),
           const SizedBox(height: 22),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /* title */
-                Text(
-                  widget.product.title,
-                  style: txt.titleLarge?.copyWith(
-                      fontSize: 21, fontWeight: FontWeight.w800, height: 1.18),
-                ),
-
-                /* weight */
+                Text(widget.product.title,
+                    style: txt.titleLarge?.copyWith(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        height: 1.18)),
                 if (widget.product.weight != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      'Вес: ${widget.product.weight} кг',
-                      style: txt.bodyMedium?.copyWith(
-                        fontSize: 15,
-                        color:
-                            isL ? const Color(0xFF40464F) : cs.onSurfaceVariant,
-                      ),
-                    ),
+                    child: Text('Вес: ${widget.product.weight} кг',
+                        style: txt.bodyMedium?.copyWith(
+                            fontSize: 15,
+                            color: isL
+                                ? const Color(0xFF40464F)
+                                : cs.onSurfaceVariant)),
                   ),
-
-                /* min weight */
                 if (widget.product.minimumWeight != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'Минимальный заказ: ${(widget.product.minimumWeight! * 1000).toInt()} г',
-                      style: txt.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color:
-                            isL ? const Color(0xFF52575E) : cs.onSurfaceVariant,
+                        'Минимальный заказ: ${(widget.product.minimumWeight! * 1000).toInt()} г',
+                        style: txt.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: isL
+                                ? const Color(0xFF52575E)
+                                : cs.onSurfaceVariant)),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(widget.product.description,
+                      style: txt.bodyMedium?.copyWith(
+                          fontSize: 15,
+                          color: isL ? AppTheme.gray700 : cs.onSurfaceVariant)),
+                ),
+                if (baseOptions.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 18, left: 4),
+                    child: Text('Состав:',
+                        style: txt.bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.w600)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 4),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: baseOptions
+                          .map((o) => Chip(
+                                label: Text(o.ingredient.name),
+                                avatar: o.ingredient.photo != null
+                                    ? CircleAvatar(
+                                        backgroundImage: NetworkImage(o
+                                                .ingredient
+                                                .photo!
+                                                .thumbnailUrl
+                                                .isNotEmpty
+                                            ? o.ingredient.photo!.thumbnailUrl
+                                            : o.ingredient.photo!.url))
+                                    : null,
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                ],
+                if (widget.product.ingredientOptions.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: InkWell(
+                      onTap: _openCustomizeSheet,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Сделать вкуснее',
+                              style: txt.bodyLarge?.copyWith(
+                                  color: cs.primary,
+                                  fontWeight: FontWeight.w700)),
+                          const SizedBox(width: 4),
+                          Icon(Icons.chevron_right,
+                              color: cs.primary, size: 20),
+                        ],
                       ),
                     ),
                   ),
-
-                /* description */
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Text(
-                    widget.product.description ?? 'Описание отсутствует',
-                    style: txt.bodyMedium?.copyWith(
-                      fontSize: 15,
-                      color: isL ? AppTheme.gray700 : cs.onSurfaceVariant,
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 24),
-
-                /* bottom panel */
                 _ButtonsBlock(
                   isInCart: _inCart,
                   totalPrice: _totalPrice,
@@ -185,7 +270,7 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
                     item: _currentCartItem(),
                     isItemInCart: _inCart,
                     isWeightBased: _isWeightBased,
-                    onAddToCart: _toggleCartState, // fallback
+                    onAddToCart: _toggleCartState,
                     onQuantityChanged: _updateQuantity,
                     onWeightChanged: _updateWeight,
                   ),
@@ -210,23 +295,20 @@ class _HeaderImage extends StatelessWidget {
     final url =
         product.imageUrl?.mediumUrl ?? 'https://via.placeholder.com/600';
     final cs = Theme.of(context).colorScheme;
-
     return AspectRatio(
       aspectRatio: 1,
       child: CachedNetworkImage(
         imageUrl: url,
         fit: BoxFit.cover,
-        placeholder: (_, __) => Stack(
-          fit: StackFit.expand,
-          children: [
-            if (hash != null) Positioned.fill(child: BlurHash(hash: hash)),
-            Shimmer.fromColors(
-              baseColor: cs.surfaceVariant,
-              highlightColor: cs.surface,
-              child: Container(color: cs.surfaceVariant),
+        placeholder: (_, __) {
+          if (hash != null) return Positioned.fill(child: BlurHash(hash: hash));
+          return const Shimmer(
+            size: Size(
+              double.infinity,
+              double.maxFinite,
             ),
-          ],
-        ),
+          );
+        },
         errorWidget: (_, __, ___) => const Icon(Icons.broken_image_rounded,
             size: 64, color: Colors.grey),
       ),
@@ -236,12 +318,11 @@ class _HeaderImage extends StatelessWidget {
 
 /*───────────────────────────────────────────────────────────────────*/
 class _ButtonsBlock extends StatelessWidget {
-  const _ButtonsBlock({
-    required this.isInCart,
-    required this.totalPrice,
-    required this.cartControl,
-    required this.onMainButtonTap,
-  });
+  const _ButtonsBlock(
+      {required this.isInCart,
+      required this.totalPrice,
+      required this.cartControl,
+      required this.onMainButtonTap});
 
   final bool isInCart;
   final double totalPrice;
@@ -252,28 +333,22 @@ class _ButtonsBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 13),
       decoration: BoxDecoration(
-        color: dark
-            ? Colors.black.withOpacity(.35)
-            : Colors.white.withOpacity(.30),
-        borderRadius: BorderRadius.circular(14),
-      ),
+          color: dark
+              ? Colors.black.withOpacity(.35)
+              : Colors.white.withOpacity(.30),
+          borderRadius: BorderRadius.circular(14)),
       child: Row(
         children: [
           Expanded(
-            child: AnimatedPrice(
-              value: totalPrice,
-              showPrefix: false,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800, color: cs.onSurface),
-            ),
-          ),
+              child: AnimatedPrice(
+                  value: totalPrice,
+                  showPrefix: false,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800, color: cs.onSurface))),
           const SizedBox(width: 12),
           cartControl,
           const SizedBox(width: 12),

@@ -1,10 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:flutter_kinza/models/cart_item.dart';
-import 'package:flutter_kinza/styles/1app_constants.dart';
 import 'package:flutter_kinza/ui/widgets/cart/cart_item_control.dart';
+import 'package:shimmer/shimmer.dart';
 
 class CartItemWidget extends StatelessWidget {
   final CartItem? item;
@@ -180,8 +179,8 @@ class CartItemWidget extends StatelessWidget {
 
   Widget _buildSkeleton(ColorScheme colorScheme) {
     return Shimmer.fromColors(
-      baseColor: colorScheme.surfaceVariant,
-      highlightColor: colorScheme.background,
+      baseColor: colorScheme.surfaceContainerHighest,
+      highlightColor: colorScheme.surface,
       child: Container(
         decoration: BoxDecoration(
           color: colorScheme.surface,
@@ -204,7 +203,7 @@ class CartItemWidget extends StatelessWidget {
               height: 70,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(13),
-                color: colorScheme.surfaceVariant,
+                color: colorScheme.surfaceContainerHighest,
               ),
             ),
             const SizedBox(width: 16),
@@ -218,7 +217,7 @@ class CartItemWidget extends StatelessWidget {
                         height: 16,
                         width: 120,
                         decoration: BoxDecoration(
-                          color: colorScheme.surfaceVariant,
+                          color: colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -227,7 +226,7 @@ class CartItemWidget extends StatelessWidget {
                         height: 12,
                         width: 70,
                         decoration: BoxDecoration(
-                          color: colorScheme.surfaceVariant,
+                          color: colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
@@ -236,7 +235,7 @@ class CartItemWidget extends StatelessWidget {
                         height: 36,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: colorScheme.surfaceVariant,
+                          color: colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
@@ -247,7 +246,7 @@ class CartItemWidget extends StatelessWidget {
                           height: 16,
                           width: 54,
                           decoration: BoxDecoration(
-                            color: colorScheme.surfaceVariant,
+                            color: colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(7),
                           ),
                         ),
@@ -262,7 +261,7 @@ class CartItemWidget extends StatelessWidget {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceVariant,
+                        color: colorScheme.surfaceContainerHighest,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -294,8 +293,8 @@ class CartItemWidget extends StatelessWidget {
       child: CachedNetworkImage(
         imageUrl: item?.thumbnailUrl ?? 'fallback_image_url',
         placeholder: (context, url) => Shimmer.fromColors(
-          baseColor: colorScheme.surfaceVariant,
-          highlightColor: colorScheme.background,
+          baseColor: colorScheme.surfaceContainerHighest,
+          highlightColor: colorScheme.surface,
           child: Container(
             width: 70,
             height: 70,

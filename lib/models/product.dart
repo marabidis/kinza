@@ -1,8 +1,113 @@
+// lib/models/product.dart
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+/// ─────────────────────────  INGREDIENT  ─────────────────────────
+class Ingredient {
+  final int id;
+  final String name;
+  final ImageUrl? photo;
 
+  const Ingredient({
+    required this.id,
+    required this.name,
+    this.photo,
+  });
+
+  /// Заглушка – используется, когда в опции нет ингредиента
+  static const empty = Ingredient(id: 0, name: '', photo: null);
+
+  factory Ingredient.fromMap(Map<String, dynamic> map) {
+    final attrs = map['attributes'] ?? {};
+
+    // --- универсальный парсер для photo ---
+    ImageUrl? photo;
+    final photoData = attrs['photo']?['data'];
+    if (photoData is List && photoData.isNotEmpty) {
+      photo = ImageUrl.fromMap(photoData[0]['attributes']);
+    } else if (photoData is Map && photoData['attributes'] != null) {
+      photo = ImageUrl.fromMap(photoData['attributes']);
+    } else {
+      photo = null;
+    }
+
+    return Ingredient(
+      id: map['id'] as int,
+      name: attrs['name'] ?? '',
+      photo: photo,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'name': name,
+        'photo': photo?.toMap(),
+      };
+}
+
+/// ───────────────────────  INGREDIENT OPTION  ───────────────────
+class IngredientOption {
+  final int id;
+  final Ingredient ingredient;
+  final bool canRemove;
+  final bool canAdd;
+  final bool canDouble;
+  final bool isDefault;
+  final int addPrice;
+  final int doublePrice;
+
+  const IngredientOption({
+    required this.id,
+    required this.ingredient,
+    required this.canRemove,
+    required this.canAdd,
+    required this.canDouble,
+    required this.isDefault,
+    required this.addPrice,
+    required this.doublePrice,
+  });
+
+  factory IngredientOption.fromMap(Map<String, dynamic> map) {
+    final attrs = map['attributes'] ?? {};
+
+    // Попытка взять один ингредиент: сначала 'ingredient', потом первый из 'ingredients'
+    dynamic ingredientData;
+    if (attrs['ingredient']?['data'] != null) {
+      ingredientData = attrs['ingredient']['data'];
+    } else if (attrs['ingredients']?['data'] is List &&
+        (attrs['ingredients']['data'] as List).isNotEmpty) {
+      ingredientData = (attrs['ingredients']['data'] as List).first;
+    } else {
+      ingredientData = null;
+    }
+
+    return IngredientOption(
+      id: map['id'] as int,
+      ingredient: ingredientData != null
+          ? Ingredient.fromMap(ingredientData)
+          : Ingredient.empty,
+      canRemove: attrs['canRemove'] ?? false,
+      canAdd: attrs['canAdd'] ?? false,
+      canDouble: attrs['canDouble'] ?? false,
+      isDefault: attrs['default'] ?? false,
+      addPrice: attrs['addPrice'] ?? 0,
+      doublePrice: attrs['doublePrice'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'ingredient': ingredient.toMap(),
+        'canRemove': canRemove,
+        'canAdd': canAdd,
+        'canDouble': canDouble,
+        'isDefault': isDefault,
+        'addPrice': addPrice,
+        'doublePrice': doublePrice,
+      };
+}
+
+/// ────────────────────────────  PRODUCT  ─────────────────────────
 class Product {
   final ImageUrl? imageUrl;
   final String blurHash;
@@ -15,8 +120,9 @@ class Product {
   final double? minimumWeight;
   final bool? isWeightBased;
   final String? mark;
+  final List<IngredientOption> ingredientOptions;
 
-  Product({
+  const Product({
     this.imageUrl,
     required this.blurHash,
     required this.title,
@@ -28,6 +134,7 @@ class Product {
     this.minimumWeight,
     this.isWeightBased,
     this.mark,
+    this.ingredientOptions = const [],
   });
 
   Product copyWith({
@@ -42,118 +149,93 @@ class Product {
     double? minimumWeight,
     bool? isWeightBased,
     String? mark,
-  }) {
-    return Product(
-      imageUrl: imageUrl ?? this.imageUrl,
-      blurHash: blurHash ?? this.blurHash,
-      title: title ?? this.title,
-      description: description ?? this.description,
-      category: category ?? this.category,
-      price: price ?? this.price,
-      id: id ?? this.id,
-      weight: weight ?? this.weight,
-      minimumWeight: minimumWeight ?? this.minimumWeight,
-      isWeightBased: isWeightBased ?? this.isWeightBased,
-      mark: mark ?? this.mark,
-    );
-  }
+    List<IngredientOption>? ingredientOptions,
+  }) =>
+      Product(
+        imageUrl: imageUrl ?? this.imageUrl,
+        blurHash: blurHash ?? this.blurHash,
+        title: title ?? this.title,
+        description: description ?? this.description,
+        category: category ?? this.category,
+        price: price ?? this.price,
+        id: id ?? this.id,
+        weight: weight ?? this.weight,
+        minimumWeight: minimumWeight ?? this.minimumWeight,
+        isWeightBased: isWeightBased ?? this.isWeightBased,
+        mark: mark ?? this.mark,
+        ingredientOptions: ingredientOptions ?? this.ingredientOptions,
+      );
 
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'imageUrl': imageUrl?.toMap(),
-      'blurHash': blurHash,
-      'title': title,
-      'description': description,
-      'category': category,
-      'price': price,
-      'id': id,
-      'weight': weight,
-      'minimumWeight': minimumWeight,
-      'isWeightBased': isWeightBased,
-      'mark': mark,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+        'imageUrl': imageUrl?.toMap(),
+        'blurHash': blurHash,
+        'title': title,
+        'description': description,
+        'category': category,
+        'price': price,
+        'id': id,
+        'weight': weight,
+        'minimumWeight': minimumWeight,
+        'isWeightBased': isWeightBased,
+        'mark': mark,
+        'ingredientOptions': ingredientOptions.map((e) => e.toMap()).toList(),
+      };
 
   factory Product.fromMap(Map<String, dynamic> item) {
-    final attributes = item['attributes'] as Map<String, dynamic>? ?? {};
-    final int id = item['id'] as int? ?? 0;
-    final imageUrlData = attributes['ImageUrl'] != null
-        ? (attributes['ImageUrl']['data']['attributes']
-            as Map<String, dynamic>?)
-        : null;
+    final attrs = item['attributes'] as Map<String, dynamic>? ?? {};
+    final id = item['id'] as int? ?? 0;
 
-    // Печать данных перед передачей их в ImageUrl.fromMap
-    print('Data before ImageUrl.fromMap: $imageUrlData');
+    // ——— imageUrl ———
+    final imageData =
+        attrs['ImageUrl']?['data']?['attributes'] as Map<String, dynamic>?;
+    final imageUrl = imageData != null ? ImageUrl.fromMap(imageData) : null;
 
-    final imageUrl =
-        imageUrlData != null ? ImageUrl.fromMap(imageUrlData) : null;
+    // ——— ingredient options ———
+    final optionsData = (attrs['ingredient_options']?['data'] as List?) ?? [];
+    final options = optionsData
+        .map((e) => IngredientOption.fromMap(e as Map<String, dynamic>))
+        .toList();
 
     return Product(
       imageUrl: imageUrl,
-      blurHash: attributes['blurHash'] ?? '',
-      title: attributes['name_item'] ?? '',
-      description: attributes['description_item'] ?? '',
-      category: attributes['category'] ?? '',
-      price: attributes['price'] as int? ?? 0,
+      blurHash: attrs['blurHash'] ?? '',
+      title: attrs['name_item'] ?? '',
+      description: attrs['description_item'] ?? '',
+      category: attrs['category'] ?? '',
+      price: attrs['price'] as int? ?? 0,
       id: id,
-      weight: (attributes['weight'] as num?)?.toDouble(),
-      minimumWeight: (attributes['minimumWeight'] as num?)?.toDouble(),
-      isWeightBased: attributes['isWeightBased'] as bool? ?? false,
-      mark: attributes['mark'],
+      weight: (attrs['weight'] as num?)?.toDouble(),
+      minimumWeight: (attrs['minimumWeight'] as num?)?.toDouble(),
+      isWeightBased: attrs['isWeightBased'] as bool? ?? false,
+      mark: attrs['mark'],
+      ingredientOptions: options,
     );
   }
 
   String toJson() => json.encode(toMap());
-
   factory Product.fromJson(String source) =>
-      Product.fromMap(json.decode(source) as Map<String, dynamic>);
+      Product.fromMap(json.decode(source));
 
   @override
-  String toString() {
-    return 'Product(imageUrl: $imageUrl, blurHash: $blurHash, title: $title, description: $description, category: $category, price: $price, id: $id, mark: $mark)';
-  }
-
-  @override
-  bool operator ==(covariant Product other) {
-    if (identical(this, other)) return true;
-
-    return other.imageUrl == imageUrl &&
-        other.blurHash == blurHash &&
-        other.title == title &&
-        other.description == description &&
-        other.category == category &&
-        other.price == price &&
-        other.id == id &&
-        other.mark == mark;
-  }
-
-  @override
-  int get hashCode {
-    return imageUrl.hashCode ^
-        blurHash.hashCode ^
-        title.hashCode ^
-        description.hashCode ^
-        category.hashCode ^
-        price.hashCode ^
-        id.hashCode ^
-        mark.hashCode;
-  }
+  String toString() =>
+      'Product(id: $id, title: $title, ingredientOptions: $ingredientOptions)';
 }
 
+/// ────────────────────────────  IMAGE URL  ────────────────────────
 class ImageUrl {
   final String url;
   final String thumbnailUrl;
-  final String mediumUrl; // Добавьте это поле
+  final String mediumUrl;
   final String blurHash;
   final String name;
   final int width;
   final int height;
   final Map<String, dynamic> formats;
 
-  ImageUrl({
+  const ImageUrl({
     required this.url,
     required this.thumbnailUrl,
-    required this.mediumUrl, // И это
+    required this.mediumUrl,
     required this.blurHash,
     required this.name,
     required this.width,
@@ -162,68 +244,41 @@ class ImageUrl {
   });
 
   factory ImageUrl.fromMap(Map<String, dynamic> map) {
-    final formatsMap = map['formats'] as Map<String, dynamic>? ?? {};
-    final smallMap = formatsMap['small'] as Map<String, dynamic>? ?? {};
-    final mediumMap =
-        formatsMap['medium'] as Map<String, dynamic>? ?? {}; // И это
+    final formats = map['formats'] as Map<String, dynamic>? ?? {};
 
-    final String smallUrl = smallMap['url'] as String? ?? '';
-    final String mediumUrl = mediumMap['url'] as String? ?? ''; // И это
+    // thumbnail → если нет, берем small → если нет, берем оригинал
+    final thumb =
+        (formats['thumbnail'] ?? formats['small']) as Map<String, dynamic>? ??
+            {};
+    final medium = formats['medium'] as Map<String, dynamic>? ?? {};
+
+    final String url = map['url'] ?? '';
+    final String thumbnailUrl = thumb['url'] ?? url;
+    final String mediumUrl = medium['url'] ?? url;
 
     return ImageUrl(
-      url: map['url'] as String? ?? '',
-      thumbnailUrl: smallUrl,
-      mediumUrl: mediumUrl, // И это
-      blurHash: map['blurhash'] as String? ?? '',
-      name: map['name'] as String? ?? '',
-      width: map['width'] as int? ?? 0,
-      height: map['height'] as int? ?? 0,
-      formats: formatsMap,
+      url: url,
+      thumbnailUrl: thumbnailUrl,
+      mediumUrl: mediumUrl,
+      blurHash: map['blurhash'] ?? '',
+      name: map['name'] ?? '',
+      width: map['width'] ?? 0,
+      height: map['height'] ?? 0,
+      formats: formats,
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'url': url,
-      'thumbnailUrl': thumbnailUrl,
-      'mediumUrl': mediumUrl, // И это
-      'blurHash': blurHash,
-      'name': name,
-      'width': width,
-      'height': height,
-      'formats': formats,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+        'url': url,
+        'thumbnailUrl': thumbnailUrl,
+        'mediumUrl': mediumUrl,
+        'blurHash': blurHash,
+        'name': name,
+        'width': width,
+        'height': height,
+        'formats': formats,
+      };
 
   @override
-  String toString() {
-    return 'ImageUrl(url: $url, thumbnailUrl: $thumbnailUrl, mediumUrl: $mediumUrl, blurHash: $blurHash, name: $name, width: $width, height: $height, formats: $formats)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-
-    return other is ImageUrl &&
-        other.url == url &&
-        other.thumbnailUrl == thumbnailUrl &&
-        other.mediumUrl == mediumUrl && // И это
-        other.blurHash == blurHash &&
-        other.name == name &&
-        other.width == width &&
-        other.height == height &&
-        other.formats == formats;
-  }
-
-  @override
-  int get hashCode {
-    return url.hashCode ^
-        thumbnailUrl.hashCode ^
-        mediumUrl.hashCode ^ // И это
-        blurHash.hashCode ^
-        name.hashCode ^
-        width.hashCode ^
-        height.hashCode ^
-        formats.hashCode;
-  }
+  String toString() => 'ImageUrl(url: $url)';
 }
