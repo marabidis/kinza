@@ -1,4 +1,4 @@
-// lib/ui/screens/orders/product/glass_sheet_wrapper.dart
+// lib/features/orders/presentation/widgets/glass_sheet_wrapper.dart
 
 import 'dart:ui';
 
@@ -12,18 +12,18 @@ class GlassSheetWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
 
     return ClipRRect(
-      // Скругляем только верхние углы
       borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Container(
-          // При тёмной теме чуть-чуть более тёмный фон; иначе — светлый полупрозрачный
+          // Для светлой темы — почти чисто белый "стеклянный" цвет,
+          // для тёмной — мягкий чёрный для полупрозрачности
           color: dark
-              ? Colors.black.withOpacity(.35)
-              : Colors.white.withOpacity(.30),
-          // SafeArea(top: false) чтобы внутрь не залезало в notch на телефонах
+              ? Colors.black.withOpacity(.22)
+              : cs.surfaceContainerHighest.withOpacity(.90),
           child: SafeArea(top: false, child: child),
         ),
       ),

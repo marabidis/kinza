@@ -13,7 +13,7 @@ class CatalogItemWidget extends StatefulWidget {
   final bool isSkeleton;
   final VoidCallback? onAddToCart;
   final VoidCallback? onRemoveFromCart;
-  final VoidCallback? onCardTap; // ← добавили
+  final VoidCallback? onCardTap;
 
   const CatalogItemWidget({
     Key? key,
@@ -31,12 +31,9 @@ class CatalogItemWidget extends StatefulWidget {
 
 class _CatalogItemWidgetState extends State<CatalogItemWidget>
     with TickerProviderStateMixin {
-  /* ─── Animations ─────────────────────────────────────────────────── */
+  /* ─── Animations ──────────────────────────────────────────────── */
   late final AnimationController _plusCtl;
-
   late final Animation<double> _plusScale;
-
-  // «утопление» карточки
   late final AnimationController _pressCtl;
 
   bool _isInCart = false;
@@ -44,7 +41,6 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
   @override
   void initState() {
     super.initState();
-
     _isInCart = widget.isChecked;
 
     _plusCtl = AnimationController(
@@ -57,7 +53,6 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
       TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1), weight: 50),
     ]).animate(CurvedAnimation(parent: _plusCtl, curve: Curves.easeOut));
 
-    // «утопление» карточки
     _pressCtl = AnimationController(
       duration: AppTheme.animFast,
       vsync: this,
@@ -67,7 +62,6 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     );
   }
 
-  /* ─── Life-cycle ─────────────────────────────────────────────────── */
   @override
   void didUpdateWidget(covariant CatalogItemWidget old) {
     super.didUpdateWidget(old);
@@ -81,7 +75,7 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     super.dispose();
   }
 
-  /* ─── Helpers ────────────────────────────────────────────────────── */
+  /* ─── Helpers ─────────────────────────────────────────────────── */
   void _toggleCart() {
     HapticFeedback.mediumImpact();
     _plusCtl.forward(from: 0);
@@ -93,7 +87,7 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     }
   }
 
-  /* ─── Skeleton ───────────────────────────────────────────────────── */
+  /* ─── Skeleton ────────────────────────────────────────────────── */
   Widget _buildSkeleton() {
     final cs = Theme.of(context).colorScheme;
     return Container(
@@ -162,7 +156,7 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     );
   }
 
-  /* ─── Image ─────────────────────────────────────────────────────── */
+  /* ─── Image ───────────────────────────────────────────────────── */
   Widget _productImage() {
     final cs = Theme.of(context).colorScheme;
     return Container(
@@ -184,10 +178,11 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
           imageUrl:
               widget.product?.imageUrl?.thumbnailUrl ?? 'placeholder_image_url',
           placeholder: (_, __) => MainSkeletonContainer(
-              width: 96,
-              height: 96,
-              radius: AppTheme.imageRadius,
-              color: cs.surfaceContainerHighest),
+            width: 96,
+            height: 96,
+            radius: AppTheme.imageRadius,
+            color: cs.surfaceContainerHighest,
+          ),
           errorWidget: (_, __, ___) => const Icon(Icons.error, size: 64),
           fit: BoxFit.cover,
         ),
@@ -195,7 +190,30 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     );
   }
 
-  /* ─── Build ─────────────────────────────────────────────────────── */
+  /* ─── Old-price (без бордера, с диагональным зачёркиванием) ─── */
+  Widget _oldPriceTag(BuildContext context, int oldPrice) {
+    final cs = Theme.of(context).colorScheme;
+    final txt = Theme.of(context).textTheme;
+
+    final text = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Text(
+        '$oldPrice₽',
+        style: txt.labelLarge?.copyWith(
+          color: cs.onSurfaceVariant,
+          fontSize: 13,
+        ),
+      ),
+    );
+
+    return _DiagonalStrike(
+      strokeColor: cs.error, // оранжево-красная линия
+      strokeWidth: 2.6,
+      child: text,
+    );
+  }
+
+  /* ─── Build ───────────────────────────────────────────────────── */
   @override
   Widget build(BuildContext context) {
     if (widget.isSkeleton) return _buildSkeleton();
@@ -203,21 +221,22 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
     final cs = Theme.of(context).colorScheme;
     final txt = Theme.of(context).textTheme;
     final mark = widget.product?.mark;
+    final oldPrice = widget.product?.discountPrice;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _pressCtl.reverse(), // 1 → 0.96
-      onTapCancel: () => _pressCtl.forward(), // вернёмся к 1
+      onTapDown: (_) => _pressCtl.reverse(),
+      onTapCancel: () => _pressCtl.forward(),
       onTapUp: (_) {
-        HapticFeedback.selectionClick(); // <--- вот сюда добавил вибрацию!
+        HapticFeedback.selectionClick();
         _pressCtl.forward();
-        widget.onCardTap?.call(); // открыть деталь
+        widget.onCardTap?.call();
       },
       child: AnimatedBuilder(
         animation: Listenable.merge([_plusCtl, _pressCtl]),
         builder: (context, _) {
           return Transform.scale(
-            scale: _pressCtl.value, // утопление
+            scale: _pressCtl.value,
             child: Container(
               margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
               padding: const EdgeInsets.all(AppTheme.cardPadding),
@@ -272,6 +291,7 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
                           const SizedBox(height: 7),
                           Row(
                             children: [
+                              /* ── New price ── */
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 13, vertical: 7),
@@ -285,7 +305,13 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
                                       ?.copyWith(color: cs.onSurface),
                                 ),
                               ),
+                              /* ── Old price (если есть) ── */
+                              if (oldPrice != null) ...[
+                                const SizedBox(width: 6),
+                                _oldPriceTag(context, oldPrice),
+                              ],
                               const Spacer(),
+                              /* ── Plus/minus ── */
                               Transform.scale(
                                 scale: _plusScale.value,
                                 child: IconButton(
@@ -316,4 +342,64 @@ class _CatalogItemWidgetState extends State<CatalogItemWidget>
       ),
     );
   }
+}
+
+/*──────────────────── Helper widget с диагональной линией ───────────────────*/
+class _DiagonalStrike extends StatelessWidget {
+  const _DiagonalStrike({
+    required this.child,
+    required this.strokeColor,
+    this.strokeWidth = 2.6,
+  });
+
+  final Widget child;
+  final Color strokeColor;
+  final double strokeWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: _DiagonalStrikePainter(
+                color: strokeColor,
+                strokeWidth: strokeWidth,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DiagonalStrikePainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  const _DiagonalStrikePainter({
+    required this.color,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    // линия из левого-низа в правый-верх
+    final start = Offset(size.width * 0.05, size.height * 0.85);
+    final end = Offset(size.width * 0.95, size.height * 0.15);
+
+    canvas.drawLine(start, end, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiagonalStrikePainter old) =>
+      old.color != color || old.strokeWidth != strokeWidth;
 }

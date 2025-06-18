@@ -1,22 +1,25 @@
 // lib/ui/screens/cart/cart_screen.dart
 import 'dart:ui'; // ← для BackdropFilter
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kinza/features/cart/presentation/widgets/cart_item_widget.dart';
-import 'package:kinza/features/cart/presentation/widgets/empty_cart_screen.dart';
-import 'package:kinza/shared/widgets/foodCatalog.dart';
 import 'package:hive/hive.dart';
 import 'package:kinza/core/models/cart_item.dart';
-import 'package:kinza/features/orders/presentation/screens/success_order_page.dart';
-import 'package:kinza/core/services/order_service.dart';
-import 'package:kinza/features/cart/presentation/widgets/delivery_info_bottom_sheet.dart';
-import 'package:kinza/features/orders/presentation/widgets/order_form.dart';
-import 'package:kinza/core/services/order_helpers.dart';
 import 'package:kinza/core/models/delivery_method.dart';
+import 'package:kinza/core/services/order_helpers.dart';
+import 'package:kinza/core/services/order_service.dart';
 import 'package:kinza/core/services/telegram_service.dart';
+import 'package:kinza/features/cart/presentation/widgets/cart_item_widget.dart';
+import 'package:kinza/features/cart/presentation/widgets/delivery_info_bottom_sheet.dart';
+import 'package:kinza/features/cart/presentation/widgets/empty_cart_screen.dart';
+import 'package:kinza/features/orders/presentation/screens/success_order_page.dart';
+import 'package:kinza/features/orders/presentation/widgets/order_form.dart';
 import 'package:kinza/shared/widgets/animated_price.dart';
+import 'package:kinza/shared/widgets/food_catalog.dart';
 
 class CartScreen extends StatefulWidget {
+  const CartScreen({super.key});
+
   @override
   _CartScreenState createState() => _CartScreenState();
 }
@@ -64,7 +67,7 @@ class _CartScreenState extends State<CartScreen> {
     // Скелетон на время загрузки корзины
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: cs.background,
+        backgroundColor: cs.surface,
         appBar: AppBar(
           elevation: 0,
           backgroundColor: Colors.transparent,
@@ -72,7 +75,7 @@ class _CartScreenState extends State<CartScreen> {
           title: Text(
             'Ваш заказ',
             style: textTheme.titleLarge
-                ?.copyWith(color: cs.onBackground, fontWeight: FontWeight.w700),
+                ?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w700),
           ),
           systemOverlayStyle:
               dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
@@ -99,7 +102,7 @@ class _CartScreenState extends State<CartScreen> {
     final totalSum = getTotalSum(cartBox);
 
     return Scaffold(
-      backgroundColor: cs.background,
+      backgroundColor: cs.surface,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent, // ← убираем фон
@@ -107,7 +110,7 @@ class _CartScreenState extends State<CartScreen> {
         title: Text(
           'Ваш заказ',
           style: textTheme.titleLarge
-              ?.copyWith(color: cs.onBackground, fontWeight: FontWeight.w700),
+              ?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w700),
         ),
         systemOverlayStyle:
             dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,

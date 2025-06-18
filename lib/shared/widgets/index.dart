@@ -1,6 +1,6 @@
 export 'animated_price.dart';
 export 'catalog_skeleton.dart';
-export 'foodCatalog.dart';
+export 'food_catalog.dart';
 export 'horizontal_menu.dart';
 export 'main_skeleton_container.dart';
 export 'my_button.dart';

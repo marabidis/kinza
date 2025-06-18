@@ -2,17 +2,17 @@ import 'dart:developer';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:kinza/core/models/CatalogFood.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:kinza/core/models/cart_item.dart';
+import 'package:kinza/core/models/catalog_food.dart';
 import 'package:kinza/core/models/product.dart';
 import 'package:kinza/core/services/api_client.dart';
 import 'package:kinza/features/cart/presentation/screens/cart_screen.dart';
+import 'package:kinza/features/cart/presentation/widgets/floating_cart_button.dart';
 import 'package:kinza/features/orders/presentation/widgets/glass_sheet_wrapper.dart';
 import 'package:kinza/features/orders/presentation/widgets/product_detail_widget.dart';
-import 'package:kinza/features/cart/presentation/widgets/floating_cart_button.dart';
-import 'package:kinza/shared/widgets/foodCatalog.dart'; // твой путь!
+import 'package:kinza/shared/widgets/food_catalog.dart';
 import 'package:kinza/shared/widgets/horizontal_menu.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 const double _ITEM_HEIGHT = 145.0;
 const double _MENU_HEIGHT = 38;
@@ -281,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
       itemCount: count,
       onPressed: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => CartScreen()),
+        MaterialPageRoute(builder: (_) => const CartScreen()),
       ),
     );
   }

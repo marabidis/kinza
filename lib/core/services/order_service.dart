@@ -9,19 +9,19 @@ class Order {
   final int orderNumber;
   final String details;
   final int totalPrice;
-  final String shippingAddress; // Новое поле
-  final String paymentMethod; // Новое поле
-  final String phone; // Новое поле
-  final DateTime timeOrder; // Изменено на DateTime
+  final String shippingAddress;
+  final String paymentMethod;
+  final String phone;
+  final DateTime timeOrder;
 
   Order({
     required this.orderNumber,
     required this.details,
     required this.totalPrice,
-    required this.shippingAddress, // Новый параметр
-    required this.paymentMethod, // Новый параметр
-    required this.phone, // Новый параметр
-    required this.timeOrder, // Изменено на DateTime
+    required this.shippingAddress,
+    required this.paymentMethod,
+    required this.phone,
+    required this.timeOrder,
   });
 
   Map<String, dynamic> toJson() {
@@ -35,31 +35,24 @@ class Order {
       'shipping_address': shippingAddress,
       'payment_method': paymentMethod,
       'phone': phone,
-      'order_date':
-          formattedTimeOrder, // Обновлено для соответствия новому типу данных
+      'order_date': formattedTimeOrder,
     };
   }
 }
 
 class OrderService {
-  static final ApiClient _apiClient =
-      ApiClient(); // Создайте экземпляр ApiClient
+  static final ApiClient _apiClient = ApiClient();
 
   static Future<bool> sendOrderToDatabase(Order order) async {
     try {
       final response = await _apiClient.sendOrder('orders', order.toJson());
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Успешный запрос
         return true;
       } else {
-        // Неудачный запрос
-        print("Error: ${response.statusCode}");
-        print("Error message: ${response.body}");
         return false;
       }
-    } catch (e) {
-      print('Exception when trying to insert order: $e');
+    } catch (_) {
       return false;
     }
   }

@@ -1,31 +1,33 @@
+// lib/core/theme/app_theme.dart
 import 'package:flutter/material.dart';
 
 class AppTheme {
+  /*──────────────── COLOR CONSTANTS ────────────────*/
   static const Color brandGreen = Color(0xFF11BB8D);
 
-  // ── Gray scale ──────────────────────────────────────────────────────────────
-  static const Color gray50 = Color(0xFFFAFAFC); // lightest – card background
-  static const Color gray100 = Color(0xFFF4F6F8); // surfaces / sheets
+  // Gray scale (light)
+  static const Color gray50 = Color(0xFFFAFAFC);
+  static const Color gray100 = Color(0xFFF4F6F8);
   static const Color gray200 = Color(0xFFECECEC);
-  static const Color gray300 = Color(0xFFE0E3E9); // strokes
-  static const Color gray500 = Color(0xFF9EA6B3); // secondary text
-  static const Color gray700 = Color(0xFF67768C); // primary text
-  static const Color gray800 = Color(0xFF2D2F32); // headings / accents
+  static const Color gray300 = Color(0xFFE0E3E9);
+  static const Color gray500 = Color(0xFF9EA6B3);
+  static const Color gray700 = Color(0xFF67768C);
+  static const Color gray800 = Color(0xFF2D2F32);
 
-  // ── Dark gray scale ─────────────────────────────────────────────────────────
-  static const Color darkBg = Color(0xFF181A1F); // основной фон
-  static const Color darkSurface = Color(0xFF23262B); // карточки, панели
+  // Dark scale
+  static const Color darkBg = Color(0xFF181A1F);
+  static const Color darkSurface = Color(0xFF23262B);
   static const Color darkCard = Color(0xFF23262B);
   static const Color darkOutline = Color(0xFF34384B);
   static const Color darkShadow = Color(0xFF101214);
   static const Color darkText = Color(0xFFE7E9ED);
-  static const Color darkSecondaryText = Color(0xFF9EA6B3);
+  static const Color darkSecondaryTxt = Color(0xFF9EA6B3);
 
-  // ── Accents & states ────────────────────────────────────────────────────────
+  // Accents & states
   static const Color yellowAccent = Color(0xFFFFD600);
   static const Color errorColor = Color(0xFFFF5B5B);
 
-  // ── Sizing tokens ───────────────────────────────────────────────────────────
+  /*──────────────── SIZE TOKENS ───────────────────*/
   static const double cardRadius = 13;
   static const double cardPadding = 8;
   static const double imageRadius = 16;
@@ -46,104 +48,105 @@ class AppTheme {
   static const Duration animFast = Duration(milliseconds: 150);
   static const Duration animNormal = Duration(milliseconds: 200);
 
-  // ── Decorations helpers ─────────────────────────────────────────────────────
-  static BoxDecoration cardDecoration(BuildContext context) => BoxDecoration(
-        color: Theme.of(context).cardColor,
+  /*──────────────── DECORATIONS ───────────────────*/
+  static BoxDecoration cardDecoration(BuildContext ctx) => BoxDecoration(
+        color: Theme.of(ctx).cardColor,
         borderRadius: BorderRadius.circular(cardRadius),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withOpacity(0.08),
+            color: Theme.of(ctx).colorScheme.shadow.withOpacity(0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       );
 
-  static BoxDecoration priceTagDecoration(BuildContext context) =>
-      BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+  static BoxDecoration priceTagDecoration(BuildContext ctx) => BoxDecoration(
+        color: Theme.of(ctx).colorScheme.surface,
         borderRadius: BorderRadius.circular(priceTagRadius),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline,
+          color: Theme.of(ctx).colorScheme.outline,
           width: 1.2,
         ),
       );
 
-  // ── ThemeData: LIGHT ────────────────────────────────────────────────────────
+  /*──────────────── THEME (LIGHT) ─────────────────*/
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     colorScheme: const ColorScheme(
       brightness: Brightness.light,
       primary: brandGreen,
       onPrimary: Colors.white,
-      secondary: Color.fromARGB(255, 45, 44, 41),
+      secondary: Color(0xFF2D2C29),
       onSecondary: gray800,
       error: errorColor,
       onError: Colors.white,
-      background: gray50,
-      onBackground: gray800,
-      surface: gray100,
-      onSurface: gray800,
+      surface: Colors.white,
+      onSurface: Color(0xFF1D1E20),
+      surfaceContainerHighest: Color(0xFFF9F9FB), // чуть контрастнее стекло
+      onSurfaceVariant: Color(0xFF4A505E), // темнее подписи
       outline: gray300,
       outlineVariant: gray200,
-      shadow: gray200,
-      inverseSurface: gray800,
-      onSurfaceVariant: gray500,
+      shadow: Color(0x331D1E20),
+      inverseSurface: Color(0xFF1D1E20),
       scrim: Color(0xCC000000),
-      surfaceTint: gray100,
+      surfaceTint: Colors.white,
     ),
     scaffoldBackgroundColor: gray50,
     appBarTheme: const AppBarTheme(
-      backgroundColor: gray100,
-      foregroundColor: gray800,
+      backgroundColor: Colors.white,
+      foregroundColor: Color(0xFF1D1E20),
       elevation: 0,
     ),
     textTheme: const TextTheme(
       titleLarge: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w700,
-        color: gray800,
+        color: Color(0xFF1D1E20),
       ),
       bodyMedium: TextStyle(
         fontSize: 16,
-        color: gray700,
+        color: Color(0xFF4A505E), // обновлено
       ),
       bodySmall: TextStyle(
         fontSize: 14,
-        color: Color.fromARGB(255, 75, 80, 87),
+        color: Color(0xFF6A7282),
       ),
       labelLarge: TextStyle(
         fontSize: priceTagFontSize,
         fontWeight: FontWeight.w700,
-        color: gray800,
+        color: Color(0xFF1D1E20),
         letterSpacing: 0.1,
       ),
     ),
     dividerColor: gray300,
-    cardColor: gray50,
-    // Можешь добавить сюда кастомные темы кнопок и т.д. если нужно
+    cardTheme: const CardTheme(
+      color: Colors.white,
+      elevation: 2,
+      shadowColor: Color(0x331D1E20),
+      margin: EdgeInsets.zero,
+    ),
   );
 
-  // ── ThemeData: DARK ─────────────────────────────────────────────────────────
+  /*──────────────── THEME (DARK) ──────────────────*/
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     colorScheme: const ColorScheme(
       brightness: Brightness.dark,
       primary: brandGreen,
       onPrimary: Colors.white,
-      secondary: Color.fromARGB(255, 161, 161, 161),
+      secondary: Color(0xFFA1A1A1),
       onSecondary: darkText,
       error: errorColor,
       onError: Colors.white,
-      background: darkBg,
-      onBackground: darkText,
       surface: darkSurface,
       onSurface: darkText,
+      surfaceContainerHighest: darkSurface,
+      onSurfaceVariant: darkSecondaryTxt,
       outline: darkOutline,
-      outlineVariant: darkSecondaryText,
+      outlineVariant: darkSecondaryTxt,
       shadow: darkShadow,
       inverseSurface: darkBg,
-      onSurfaceVariant: darkSecondaryText,
       scrim: Color(0xCC000000),
       surfaceTint: darkSurface,
     ),
@@ -161,11 +164,11 @@ class AppTheme {
       ),
       bodyMedium: TextStyle(
         fontSize: 16,
-        color: darkSecondaryText,
+        color: darkSecondaryTxt,
       ),
       bodySmall: TextStyle(
         fontSize: 14,
-        color: darkSecondaryText,
+        color: darkSecondaryTxt,
       ),
       labelLarge: TextStyle(
         fontSize: priceTagFontSize,
@@ -175,7 +178,11 @@ class AppTheme {
       ),
     ),
     dividerColor: darkOutline,
-    cardColor: darkCard,
-    // Можешь добавить сюда кастомные темы кнопок и т.д. если нужно
+    cardTheme: const CardTheme(
+      color: darkCard,
+      elevation: 2,
+      shadowColor: Color(0x66101214),
+      margin: EdgeInsets.zero,
+    ),
   );
 }

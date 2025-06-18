@@ -3,18 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:kinza/core/models/cart_item.dart';
-import 'package:kinza/core/models/ingredient_option.dart'; // IngredientOption
-import 'package:kinza/core/models/product.dart' show Product; // Product
-import 'package:kinza/core/theme/app_theme.dart';
+import 'package:kinza/core/models/ingredient_option.dart';
+import 'package:kinza/core/models/product.dart' show Product;
 import 'package:kinza/features/cart/presentation/widgets/cart_item_control.dart';
 import 'package:kinza/features/orders/presentation/widgets/glass_sheet_wrapper.dart';
+import 'package:kinza/features/orders/presentation/widgets/ingredient_customize_sheet.dart';
 import 'package:kinza/shared/widgets/animated_price.dart';
 import 'package:kinza/shared/widgets/my_button.dart';
 import 'package:kinza/shared/widgets/shimmer.dart';
 
-import 'ingredient_customize_sheet.dart'; // новый sheet
-
-/*───────────────────────────────────────────────────────────────────*/
 class ProductDetailWidget extends StatefulWidget {
   const ProductDetailWidget({
     super.key,
@@ -47,7 +44,6 @@ class ProductDetailWidget extends StatefulWidget {
   State<ProductDetailWidget> createState() => _ProductDetailWidgetState();
 }
 
-/*───────────────────────────────────────────────────────────────────*/
 class _ProductDetailWidgetState extends State<ProductDetailWidget> {
   late bool _inCart;
   late int _qty;
@@ -81,7 +77,6 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
         minimumWeight: widget.product.minimumWeight,
       );
 
-  /*────────── корзина ─────────*/
   void _addToCartIfFirstTime() {
     if (!_inCart) {
       widget.onAddToCart();
@@ -127,7 +122,6 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
     }
   }
 
-  /*────────── модальное окно ─────────*/
   Future<void> _openCustomizeSheet() async {
     final result = await showModalBottomSheet<List<IngredientOption>>(
       context: context,
@@ -155,12 +149,11 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
     }
   }
 
-  /*────────────────────────── UI ──────────────────────────*/
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final txt = Theme.of(context).textTheme;
-    final isL = Theme.of(context).brightness == Brightness.light;
+    final isLight = Theme.of(context).brightness == Brightness.light;
 
     final baseOptions =
         widget.product.ingredientOptions.where((o) => o.isDefault).toList();
@@ -176,67 +169,66 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.product.title,
-                    style: txt.titleLarge?.copyWith(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w800,
-                        height: 1.18)),
+                Text(
+                  widget.product.title,
+                  style: txt.titleLarge?.copyWith(height: 1.18),
+                ),
                 if (widget.product.weight != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text('Вес: ${widget.product.weight} кг',
-                        style: txt.bodyMedium?.copyWith(
-                            fontSize: 15,
-                            color: isL
-                                ? const Color(0xFF40464F)
-                                : cs.onSurfaceVariant)),
+                    child: Text(
+                      'Вес: ${widget.product.weight} кг',
+                      style: txt.bodyMedium?.copyWith(
+                        color: isLight ? cs.onSurface : cs.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 if (widget.product.minimumWeight != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                        'Минимальный заказ: ${(widget.product.minimumWeight! * 1000).toInt()} г',
-                        style: txt.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: isL
-                                ? const Color(0xFF52575E)
-                                : cs.onSurfaceVariant)),
+                      'Минимальный заказ: ${(widget.product.minimumWeight! * 1000).toInt()} г',
+                      style: txt.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: isLight
+                            ? cs.onSurface.withOpacity(0.8)
+                            : cs.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
-                  child: Text(widget.product.description,
-                      style: txt.bodyMedium?.copyWith(
-                          fontSize: 15,
-                          color: isL ? AppTheme.gray700 : cs.onSurfaceVariant)),
+                  child: Text(
+                    widget.product.description,
+                    style: txt.bodyMedium?.copyWith(
+                      color: isLight
+                          ? cs.onSurface.withOpacity(0.9)
+                          : cs.onSurfaceVariant,
+                    ),
+                  ),
                 ),
                 if (baseOptions.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(top: 18, left: 4),
-                    child: Text('Состав:',
-                        style: txt.bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.w600)),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 4),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: baseOptions
-                          .map((o) => Chip(
-                                label: Text(o.ingredient.name),
-                                avatar: o.ingredient.photo != null
-                                    ? CircleAvatar(
-                                        backgroundImage: NetworkImage(o
-                                                .ingredient
-                                                .photo!
-                                                .thumbnailUrl
-                                                .isNotEmpty
-                                            ? o.ingredient.photo!.thumbnailUrl
-                                            : o.ingredient.photo!.url))
-                                    : null,
-                              ))
-                          .toList(),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Состав:',
+                    style: txt.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
                     ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: baseOptions
+                        .map((o) => Chip(
+                              label: Text(o.ingredient.name),
+                              backgroundColor: cs.surfaceContainerHighest,
+                              labelStyle: txt.bodySmall?.copyWith(
+                                color: cs.onSurface,
+                              ),
+                            ))
+                        .toList(),
                   ),
                 ],
                 if (widget.product.ingredientOptions.isNotEmpty)
@@ -248,10 +240,13 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Сделать вкуснее',
-                              style: txt.bodyLarge?.copyWith(
-                                  color: cs.primary,
-                                  fontWeight: FontWeight.w700)),
+                          Text(
+                            'Сделать вкуснее',
+                            style: txt.bodyLarge?.copyWith(
+                              color: cs.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           const SizedBox(width: 4),
                           Icon(Icons.chevron_right,
                               color: cs.primary, size: 20),
@@ -260,17 +255,53 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
                     ),
                   ),
                 const SizedBox(height: 24),
-                _ButtonsBlock(
-                  isInCart: _inCart,
-                  totalPrice: _totalPrice,
-                  onMainButtonTap: _toggleCartState,
-                  cartControl: CartItemControl(
-                    item: _currentCartItem(),
-                    isItemInCart: _inCart,
-                    isWeightBased: _isWeightBased,
-                    onAddToCart: _toggleCartState,
-                    onQuantityChanged: _updateQuantity,
-                    onWeightChanged: _updateWeight,
+                Container(
+                  decoration: BoxDecoration(
+                    color: cs.surface.withOpacity(0.30),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: AnimatedPrice(
+                          value: _totalPrice,
+                          showPrefix: false,
+                          style: txt.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: cs.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      CartItemControl(
+                        item: _currentCartItem(),
+                        isItemInCart: _inCart,
+                        isWeightBased: _isWeightBased,
+                        onAddToCart: _toggleCartState,
+                        onQuantityChanged: _updateQuantity,
+                        onWeightChanged: _updateWeight,
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 124,
+                        child: MyButton(
+                          buttonText: _inCart ? 'В корзине' : 'В корзину',
+                          isChecked: _inCart,
+                          onPressed: _toggleCartState,
+                          height: 44,
+                          borderRadius: 11,
+                          backgroundColor: _inCart
+                              ? cs.surface
+                              : cs.primary.withOpacity(.90),
+                          textColor: _inCart
+                              ? cs.onSurface.withOpacity(.7)
+                              : cs.onPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -282,10 +313,8 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
   }
 }
 
-/*───────────────────────────────────────────────────────────────────*/
 class _HeaderImage extends StatelessWidget {
   const _HeaderImage({required this.product});
-
   final Product product;
 
   @override
@@ -304,70 +333,6 @@ class _HeaderImage extends StatelessWidget {
             : const Shimmer(size: Size(double.infinity, double.maxFinite)),
         errorWidget: (_, __, ___) => const Icon(Icons.broken_image_rounded,
             size: 64, color: Colors.grey),
-      ),
-    );
-  }
-}
-
-/*───────────────────────────────────────────────────────────────────*/
-class _ButtonsBlock extends StatelessWidget {
-  const _ButtonsBlock({
-    required this.isInCart,
-    required this.totalPrice,
-    required this.cartControl,
-    required this.onMainButtonTap,
-  });
-
-  final bool isInCart;
-  final double totalPrice;
-  final Widget cartControl;
-  final VoidCallback onMainButtonTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 13),
-      decoration: BoxDecoration(
-        color: dark
-            ? Colors.black.withOpacity(.35)
-            : Colors.white.withOpacity(.30),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: AnimatedPrice(
-              value: totalPrice,
-              showPrefix: false,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800, color: cs.onSurface),
-            ),
-          ),
-          const SizedBox(width: 12),
-          cartControl,
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 124,
-            child: MyButton(
-              buttonText: isInCart ? 'В корзине' : 'В корзину',
-              isChecked: isInCart,
-              onPressed: onMainButtonTap,
-              height: 44,
-              borderRadius: 11,
-              backgroundColor:
-                  isInCart ? cs.surface : cs.primary.withOpacity(.90),
-              textColor: isInCart ? cs.onSurface.withOpacity(.7) : cs.onPrimary,
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-            ),
-          ),
-        ],
       ),
     );
   }

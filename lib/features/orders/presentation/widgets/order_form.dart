@@ -1,8 +1,6 @@
-// lib/ui/widgets/order_form.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kinza/core/models/delivery_method.dart';
-import 'package:kinza/core/theme/app_theme.dart';
 
 class OrderForm extends StatefulWidget {
   final Function(DeliveryMethod, String?, String?, String?, String?) onSubmit;
@@ -135,7 +133,7 @@ class OrderFormState extends State<OrderForm>
   /* ───────────────── widgets ───────────────────── */
   Widget _tabBar(ColorScheme cs, ThemeData theme) => Container(
         decoration: BoxDecoration(
-          color: cs.surfaceVariant,
+          color: cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(22),
         ),
         padding: const EdgeInsets.all(4),
@@ -156,7 +154,7 @@ class OrderFormState extends State<OrderForm>
           unselectedLabelColor: cs.onSurfaceVariant,
           labelStyle: theme.textTheme.bodyMedium?.copyWith(fontSize: 15),
           indicatorSize: TabBarIndicatorSize.tab,
-          overlayColor: MaterialStateProperty.all(Colors.transparent),
+          overlayColor: WidgetStateProperty.all(Colors.transparent),
           dividerHeight: 0,
           tabs: const [
             Tab(
@@ -204,7 +202,7 @@ class OrderFormState extends State<OrderForm>
               labelStyle: theme.textTheme.bodySmall
                   ?.copyWith(color: cs.onSurfaceVariant),
               filled: true,
-              fillColor: cs.surfaceVariant.withOpacity(0.97),
+              fillColor: cs.surfaceContainerHighest.withOpacity(0.97),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               border: OutlineInputBorder(
