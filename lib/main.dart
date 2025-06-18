@@ -27,7 +27,9 @@ Future<void> main() async {
   Hive.registerAdapter(CartItemAdapter());
 
   log('API_BASE_URL: ${Config.apiBaseUrl}');
-  final apiClient = ApiClient();
+
+  // ★ берём singleton
+  final apiClient = ApiClient.instance;
 
   runApp(MyApp(apiClient: apiClient));
 }

@@ -1,5 +1,4 @@
-// lib/ui/screens/cart/cart_screen.dart
-import 'dart:ui'; // ← для BackdropFilter
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,34 +6,27 @@ import 'package:hive/hive.dart';
 import 'package:kinza/core/models/cart_item.dart';
 import 'package:kinza/core/models/delivery_method.dart';
 import 'package:kinza/core/services/order_helpers.dart';
-import 'package:kinza/core/services/order_service.dart';
-import 'package:kinza/core/services/telegram_service.dart';
+import 'package:kinza/features/cart/presentation/screens/checkout_screen.dart';
 import 'package:kinza/features/cart/presentation/widgets/cart_item_widget.dart';
-import 'package:kinza/features/cart/presentation/widgets/delivery_info_bottom_sheet.dart';
 import 'package:kinza/features/cart/presentation/widgets/empty_cart_screen.dart';
-import 'package:kinza/features/orders/presentation/screens/success_order_page.dart';
-import 'package:kinza/features/orders/presentation/widgets/order_form.dart';
 import 'package:kinza/shared/widgets/animated_price.dart';
-import 'package:kinza/shared/widgets/food_catalog.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
   @override
-  _CartScreenState createState() => _CartScreenState();
+  State<CartScreen> createState() => _CartScreenState();
 }
 
 class _CartScreenState extends State<CartScreen> {
   late Box<CartItem> cartBox;
-  bool _isProcessing = false;
-  final GlobalKey<OrderFormState> _orderFormKey = GlobalKey<OrderFormState>();
-  final ValueNotifier<DeliveryMethod> _deliveryMethodNotifier =
-      ValueNotifier<DeliveryMethod>(DeliveryMethod.courier);
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
-  int _lastTotalSum = 0;
+  final ValueNotifier<DeliveryMethod> _deliveryMethodNotifier =
+      ValueNotifier<DeliveryMethod>(DeliveryMethod.courier);
 
-  bool _isLoading = true; // добавлено
+  int _lastTotalSum = 0;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -48,52 +40,23 @@ class _CartScreenState extends State<CartScreen> {
     setState(() => _isLoading = false);
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isLoading) {
-      _lastTotalSum = getTotalSum(cartBox);
-    }
-  }
-
-  /*──────────────────────────────────────────────────────────────────────*/
+  /*───────────────────────────── UI ───────────────────────────────*/
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final txt = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
 
-    // Скелетон на время загрузки корзины
+    // Скелетон во время инициализации Hive
     if (_isLoading) {
       return Scaffold(
         backgroundColor: cs.surface,
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          iconTheme: IconThemeData(color: cs.onSurface),
-          title: Text(
-            'Ваш заказ',
-            style: textTheme.titleLarge
-                ?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w700),
-          ),
-          systemOverlayStyle:
-              dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
-          flexibleSpace: ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                color: dark
-                    ? Colors.black.withOpacity(.30)
-                    : Colors.white.withOpacity(.25),
-              ),
-            ),
-          ),
-        ),
+        appBar: _buildAppBar(cs, txt, dark),
         body: ListView.builder(
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
           itemCount: 5,
-          itemBuilder: (_, __) => const CatalogItemWidget(isSkeleton: true),
+          itemBuilder: (_, __) => const CartItemWidget(isSkeleton: true),
         ),
       );
     }
@@ -103,19 +66,26 @@ class _CartScreenState extends State<CartScreen> {
 
     return Scaffold(
       backgroundColor: cs.surface,
-      appBar: AppBar(
+      appBar: _buildAppBar(cs, txt, dark),
+      body: isEmpty ? const EmptyCartScreen() : _buildCartList(cs),
+      bottomNavigationBar: isEmpty ? null : _buildBottomBar(totalSum, cs, txt),
+    );
+  }
+
+  AppBar _buildAppBar(ColorScheme cs, TextTheme txt, bool dark) => AppBar(
         elevation: 0,
-        backgroundColor: Colors.transparent, // ← убираем фон
+        backgroundColor: Colors.transparent,
         iconTheme: IconThemeData(color: cs.onSurface),
         title: Text(
           'Ваш заказ',
-          style: textTheme.titleLarge
-              ?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w700),
+          style: txt.titleLarge?.copyWith(
+            color: cs.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         systemOverlayStyle:
             dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         flexibleSpace: ClipRect(
-          // ← стеклянный слой
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
             child: Container(
@@ -125,15 +95,9 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
         ),
-      ),
-      body: isEmpty ? EmptyCartScreen() : _buildCartList(cs),
-      bottomNavigationBar: _buildBottomNavigationBar(totalSum, cs, textTheme),
-    );
-  }
+      );
 
-  /*──────────────────────────────────────────────────────────────────────*/
-  /*                           CART LIST                                 */
-  /*──────────────────────────────────────────────────────────────────────*/
+  /*────────────────────────── Cart list ───────────────────────────*/
 
   Widget _buildCartList(ColorScheme cs) {
     return SingleChildScrollView(
@@ -149,29 +113,13 @@ class _CartScreenState extends State<CartScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               initialItemCount: cartBox.length,
-              itemBuilder: (context, index, animation) {
+              itemBuilder: (context, index, anim) {
                 final item = cartBox.getAt(index);
                 final isLast = index == cartBox.length - 1;
                 return item != null
-                    ? _buildCartItem(item, index, animation, isLast, cs)
+                    ? _buildCartItem(item, index, anim, isLast, cs)
                     : const SizedBox.shrink();
               },
-            ),
-          ),
-          const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: OrderForm(
-              key: _orderFormKey,
-              deliveryMethodNotifier: _deliveryMethodNotifier,
-              updateDelivery: (m) =>
-                  setState(() => _deliveryMethodNotifier.value = m),
-              onSubmit: (m, name, phone, addr, comm) {
-                if (_orderFormKey.currentState!.validate()) {
-                  _processOrder(m, name, phone, addr, comm);
-                }
-              },
-              totalPrice: getTotalSum(cartBox),
             ),
           ),
           const SizedBox(height: 20),
@@ -180,8 +128,13 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildCartItem(CartItem item, int idx, Animation<double> anim,
-      bool isLast, ColorScheme cs) {
+  Widget _buildCartItem(
+    CartItem item,
+    int idx,
+    Animation<double> anim,
+    bool isLast,
+    ColorScheme cs,
+  ) {
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
       child: SizeTransition(
@@ -207,22 +160,20 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  /*──────────────────────────────────────────────────────────────────────*/
-  /*                        BOTTOM  BAR                                   */
-  /*──────────────────────────────────────────────────────────────────────*/
+  /*────────────────────────── Bottom bar ──────────────────────────*/
 
-  Widget _buildBottomNavigationBar(
-      int totalSum, ColorScheme cs, TextTheme txt) {
-    final isEmpty = cartBox.isEmpty;
-
-    // для анимации суммы
+  Widget _buildBottomBar(int totalSum, ColorScheme cs, TextTheme txt) {
+    // Анимация суммы
     if (_lastTotalSum != totalSum) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _lastTotalSum = totalSum);
       });
     }
 
-    if (isEmpty) return const SizedBox.shrink();
+    final canCheckout =
+        _deliveryMethodNotifier.value == DeliveryMethod.pickup ||
+            (_deliveryMethodNotifier.value == DeliveryMethod.courier &&
+                totalSum >= 800);
 
     return Container(
       decoration: BoxDecoration(
@@ -239,134 +190,52 @@ class _CartScreenState extends State<CartScreen> {
       padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 10),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_deliveryMethodNotifier.value == DeliveryMethod.courier)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Text(
-                      totalSum >= 800
-                          ? 'Бесплатная доставка'
-                          : 'Доставка — 100 ₽\nДо бесплатной: ${800 - totalSum} ₽',
-                      style: txt.bodySmall?.copyWith(
-                        color: totalSum >= 800 ? cs.primary : cs.error,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.info_outline, color: cs.primary),
-                    onPressed: () => _showDeliveryDetails(context),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 10),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: ElevatedButton(
-                key: ValueKey(_isProcessing),
-                onPressed: _isProcessing ||
-                        (_deliveryMethodNotifier.value ==
-                                DeliveryMethod.courier &&
-                            totalSum < 800)
-                    ? null
-                    : () {
-                        _scrollToOrderForm();
-                        if (_orderFormKey.currentState!.validate()) {
-                          final data =
-                              _orderFormKey.currentState!.getFormData();
-                          _processOrder(
-                            data['method'],
-                            data['name'],
-                            data['phoneNumber'],
-                            data['address'],
-                            data['comment'],
-                          );
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  backgroundColor: _isProcessing ||
-                          (_deliveryMethodNotifier.value ==
-                                  DeliveryMethod.courier &&
-                              totalSum < 800)
-                      ? cs.outline.withOpacity(0.4)
-                      : cs.primary,
-                  foregroundColor: cs.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: _isProcessing
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(strokeWidth: 3),
-                      )
-                    : (_deliveryMethodNotifier.value == DeliveryMethod.pickup ||
-                            totalSum >= 800)
-                        ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Оформить заказ на ',
-                                style: txt.bodyLarge?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: cs.onPrimary,
-                                ),
-                              ),
-                              AnimatedPrice(
-                                value: totalSum.toDouble(),
-                                style: txt.bodyLarge?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: cs.onPrimary,
-                                ),
-                              ),
-                            ],
-                          )
-                        : Text(
-                            'Добавьте товаров ещё на ${800 - totalSum} ₽',
-                            style: txt.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: cs.onPrimary,
-                            ),
-                          ),
-              ),
+        child: ElevatedButton(
+          onPressed: canCheckout ? _openCheckout : null,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            backgroundColor:
+                canCheckout ? cs.primary : cs.outline.withOpacity(0.4),
+            foregroundColor: cs.onPrimary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Оформить на ',
+                style: txt.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: cs.onPrimary,
+                ),
+              ),
+              AnimatedPrice(
+                value: totalSum.toDouble(),
+                style: txt.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: cs.onPrimary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  /*──────────────────────────────────────────────────────────────────────*/
-  /*                         HELPERS                                      */
-  /*──────────────────────────────────────────────────────────────────────*/
+  /*──────────────────────────── Helpers ───────────────────────────*/
 
-  void _scrollToOrderForm() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 700),
-        curve: Curves.easeInOut,
-      );
-    });
-  }
-
-  void _showDeliveryDetails(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+  void _openCheckout() {
+    final totalSum = getTotalSum(cartBox);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CheckoutScreen(total: totalSum),
       ),
-      builder: (_) => const DeliveryInfoBottomSheet(),
     );
   }
 
@@ -376,8 +245,13 @@ class _CartScreenState extends State<CartScreen> {
       cartBox.deleteAt(index);
       _listKey.currentState?.removeItem(
         index,
-        (ctx, anim) => _buildCartItem(item, index, anim,
-            index == cartBox.length - 1, Theme.of(ctx).colorScheme),
+        (ctx, anim) => _buildCartItem(
+          item,
+          index,
+          anim,
+          index == cartBox.length - 1,
+          Theme.of(ctx).colorScheme,
+        ),
         duration: const Duration(milliseconds: 300),
       );
     }
@@ -387,66 +261,5 @@ class _CartScreenState extends State<CartScreen> {
   void _updateCartItem(int index, CartItem updatedItem) {
     cartBox.putAt(index, updatedItem);
     setState(() {});
-  }
-
-  void _processOrder(DeliveryMethod m, String? name, String? phone,
-      String? addr, String? comm) async {
-    if (!_orderFormKey.currentState!.validate()) return;
-
-    setState(() => _isProcessing = true);
-    final orderNum = await incrementOrderNumber();
-    final totalSum = getTotalSum(cartBox);
-
-    // --- Формируем текст заказа для Telegram ---
-    final orderDetails = generateOrderDetailsString(
-      orderNum,
-      m,
-      name,
-      phone,
-      addr,
-      comm,
-      cartBox,
-      totalSum,
-      m,
-    );
-
-    // --- СОЗДАЁМ объект Order для Strapi ---
-    final order = Order(
-      orderNumber: orderNum,
-      details: orderDetails,
-      totalPrice: totalSum,
-      shippingAddress: addr ?? '',
-      paymentMethod: m == DeliveryMethod.courier ? 'Курьер' : 'Самовывоз',
-      phone: phone ?? '',
-      timeOrder: DateTime.now(),
-    );
-
-    // --- Отправляем заказ в Strapi ---
-    try {
-      final ok = await OrderService.sendOrderToDatabase(order);
-      if (!ok) {
-        debugPrint("Ошибка при отправке заказа в Strapi!");
-        // Здесь можно показать SnackBar или что-то ещё пользователю
-      }
-    } catch (e) {
-      debugPrint("Exception при отправке заказа в Strapi: $e");
-    }
-
-    // --- Отправляем заказ в Telegram ---
-    try {
-      await sendOrderToTelegram(orderDetails);
-    } catch (e) {
-      debugPrint("Ошибка при отправке заказа в Telegram: $e");
-      // Здесь можно показать SnackBar, если нужно
-    }
-
-    // ... логика перехода на SuccessOrderPage …
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SuccessOrderPage(orderNumber: orderNum),
-      ),
-    );
-    setState(() => _isProcessing = false);
   }
 }

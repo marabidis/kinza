@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 class EmptyCartScreen extends StatelessWidget {
+  const EmptyCartScreen({Key? key}) : super(key: key); // ← const-конструктор
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background, // <-- используем фон темы!
+      backgroundColor: colorScheme.surface,
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -16,11 +18,11 @@ class EmptyCartScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // КРУГ КРУПНЕЕ, КАРТИНКА БОЛЬШЕ
+                // Круглая картинка-плейсхолдер
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: colorScheme.surface, // <-- фон круга по теме
+                    color: colorScheme.surface,
                     boxShadow: [
                       BoxShadow(
                         color: colorScheme.shadow.withOpacity(0.07),
@@ -39,10 +41,10 @@ class EmptyCartScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 36),
                 Text(
-                  "Пока, тут пусто!",
+                  'Пока, тут пусто!',
                   style: textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: colorScheme.onBackground,
+                    color: colorScheme.onSurface,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -50,16 +52,15 @@ class EmptyCartScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
                   child: Text(
-                    "Добавьте что-нибудь вкусное из меню!",
+                    'Добавьте что-нибудь вкусное из меню!',
                     style: textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onBackground.withOpacity(0.7),
+                      color: colorScheme.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(height: 40),
-                // КОМПАКТНАЯ КНОПКА
                 SizedBox(
                   width: double.infinity,
                   height: 44,
@@ -77,12 +78,11 @@ class EmptyCartScreen extends StatelessWidget {
                       elevation: 0,
                     ),
                     child: Text(
-                      "В каталог",
+                      'В каталог',
                       style: textTheme.labelLarge?.copyWith(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color:
-                            colorScheme.onPrimary, // цвет текста кнопки по теме
+                        color: colorScheme.onPrimary,
                       ),
                     ),
                   ),

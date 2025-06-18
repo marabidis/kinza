@@ -1,10 +1,10 @@
+import 'dart:convert';
+
 import 'package:intl/intl.dart';
-import 'package:kinza/core/services/api_client.dart'; // Убедитесь, что путь к файлу правильный
-import 'package:kinza/core/services/time_service.dart'; // Импортируйте TimeService
+import 'package:kinza/core/services/api_client.dart';
+import 'package:kinza/core/services/time_service.dart';
 
-DateTime timeOrder =
-    DateTime.parse(TimeService.getCurrentTime()); // Получение текущего времени
-
+/// Модель заказа, которую сериализуем в Strapi.
 class Order {
   final int orderNumber;
   final String details;
@@ -21,13 +21,10 @@ class Order {
     required this.shippingAddress,
     required this.paymentMethod,
     required this.phone,
-    required this.timeOrder,
-  });
+    DateTime? timeOrder,
+  }) : timeOrder = timeOrder ?? DateTime.parse(TimeService.getCurrentTime());
 
   Map<String, dynamic> toJson() {
-    String formattedTimeOrder =
-        DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(timeOrder.toUtc());
-
     return {
       'orderNumber': orderNumber,
       'details': details,
@@ -35,25 +32,57 @@ class Order {
       'shipping_address': shippingAddress,
       'payment_method': paymentMethod,
       'phone': phone,
-      'order_date': formattedTimeOrder,
+      'order_date':
+          DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(timeOrder.toUtc()),
     };
   }
 }
 
+/// Сервис для работы с /orders в Strapi.
 class OrderService {
-  static final ApiClient _apiClient = ApiClient();
+  OrderService({ApiClient? apiClient}) : _api = apiClient ?? ApiClient.instance;
 
-  static Future<bool> sendOrderToDatabase(Order order) async {
-    try {
-      final response = await _apiClient.sendOrder('orders', order.toJson());
+  final ApiClient _api;
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (_) {
-      return false;
+  /// Создаёт заказ и возвращает его id.
+  ///
+  /// Бросает [Exception] если сервер вернул ≠ 2xx.
+  Future<String> createOrder({
+    required String jwt,
+    required String phone,
+    required String address,
+    required String payment,
+    String? comment,
+    required int total,
+  }) async {
+    // Собираем Order — номер можете генерировать на бекенде,
+    // здесь даём 0 и Strapi создаст сам.
+    final order = Order(
+      orderNumber: 0,
+      details: comment ?? '',
+      totalPrice: total,
+      shippingAddress: address,
+      paymentMethod: payment,
+      phone: phone,
+    );
+
+    final uri = Uri.parse('${_api.baseUrl}/orders');
+    final res = await _api.client.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $jwt',
+      },
+      body: jsonEncode({'data': order.toJson()}),
+    );
+
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final json = jsonDecode(res.body) as Map<String, dynamic>;
+      return json['data']['id'].toString();
     }
+
+    throw Exception(
+      'OrderService: status ${res.statusCode}, body ${res.body}',
+    );
   }
 }
