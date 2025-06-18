@@ -1,4 +1,3 @@
-// lib/features/cart/presentation/screens/checkout_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kinza/core/services/order_service.dart';
@@ -14,6 +13,7 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
+  /* ───────── controllers & state ───────── */
   final _formKey = GlobalKey<FormState>();
   final _addressCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -38,41 +38,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.dispose();
   }
 
-  /*──────────────────────────── FLOW ─────────────────────────────*/
-
+  /* ───────── main flow ───────── */
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
-    final phone = '+${_phoneMask.getUnmaskedText()}';
 
-    // 1. /send
-    if (!await _auth.sendCode(phone)) {
+    final phone = '+${_phoneMask.getUnmaskedText()}';
+    debugPrint('📜 log | phone → $phone');
+
+    /* 1️⃣ отправляем код */
+    final sent = await _auth.sendCode(phone);
+    debugPrint('📜 log | sendCode → $sent');
+    if (!sent) {
       _showError('Не удалось отправить код');
       setState(() => _loading = false);
       return;
     }
 
-    // 2. ask code ui
+    /* 2️⃣ диалог ввода кода */
     final code = await _askCode();
     if (code == null) {
       setState(() => _loading = false);
       return;
     }
 
-    // 3. /confirm
+    /* 3️⃣ подтверждаем */
     final jwt = await _auth.confirmCode(phone, code);
+    debugPrint('📜 log | jwt → $jwt');
     if (jwt == null) {
       _showError('Неверный или истёкший код');
       setState(() => _loading = false);
       return;
     }
 
-    // 4. create order
+    /* 4️⃣ создаём заказ */
     final orderId = await _order.createOrder(
       jwt: jwt,
       phone: phone,
-      address: _addressCtrl.text,
+      address: _addressCtrl.text.trim(),
       payment: _payment,
       comment:
           _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim(),
@@ -81,14 +85,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     if (!mounted) return;
     setState(() => _loading = false);
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => _SuccessPage(orderId: orderId)),
     );
   }
 
-  /*──────────────────────── UI HELPERS ─────────────────────────*/
-
+  /* ───────── ask code dialog ───────── */
   Future<String?> _askCode() async {
     String? code;
     await showDialog(
@@ -100,8 +104,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           title: const Text('Введите код из SMS'),
           content: TextField(
             controller: ctrl,
-            maxLength: 4,
             keyboardType: TextInputType.number,
+            maxLength: 4,
             decoration: const InputDecoration(counterText: ''),
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           ),
@@ -129,8 +133,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void _showError(String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
-  /*───────────────────────────── UI ───────────────────────────────*/
-
+  /* ───────── UI ───────── */
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -144,8 +147,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               TextFormField(
                 controller: _addressCtrl,
                 decoration: const InputDecoration(labelText: 'Адрес доставки'),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Укажите адрес' : null,
+                validator:
+                    (v) => v == null || v.isEmpty ? 'Укажите адрес' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -153,42 +156,51 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 decoration: const InputDecoration(labelText: 'Телефон'),
                 keyboardType: TextInputType.phone,
                 inputFormatters: [_phoneMask],
-                validator: (v) => _phoneMask.getUnmaskedText().length == 11
-                    ? null
-                    : 'Неверный телефон',
+                validator:
+                    (_) =>
+                        _phoneMask.getUnmaskedText().length == 11
+                            ? null
+                            : 'Неверный телефон',
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _payment,
+                decoration: const InputDecoration(labelText: 'Оплата'),
                 items: const [
                   DropdownMenuItem(
-                      value: 'card', child: Text('Картой курьеру')),
+                    value: 'card',
+                    child: Text('Картой курьеру'),
+                  ),
                   DropdownMenuItem(value: 'cash', child: Text('Наличными')),
                 ],
                 onChanged: (v) => setState(() => _payment = v ?? 'card'),
-                decoration: const InputDecoration(labelText: 'Оплата'),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _commentCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Комментарий к заказу'),
+                decoration: const InputDecoration(
+                  labelText: 'Комментарий к заказу',
+                ),
                 maxLines: 3,
               ),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Итого: ${widget.total} ₽',
-                      style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Итого: ${widget.total} ₽',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   ElevatedButton(
                     onPressed: _loading ? null : _submit,
-                    child: _loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Подтвердить'),
+                    child:
+                        _loading
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Text('Подтвердить'),
                   ),
                 ],
               ),
@@ -200,8 +212,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 }
 
-/*──────────────────────── Success page ──────────────────────────*/
-
+/* ───────── success page ───────── */
 class _SuccessPage extends StatelessWidget {
   final String orderId;
   const _SuccessPage({required this.orderId});
@@ -215,12 +226,15 @@ class _SuccessPage extends StatelessWidget {
           children: [
             const Icon(Icons.check_circle, size: 72, color: Colors.green),
             const SizedBox(height: 16),
-            Text('Заказ $orderId создан!',
-                style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              'Заказ $orderId создан!',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 8),
             ElevatedButton(
-              onPressed: () =>
-                  Navigator.of(context).popUntil((route) => route.isFirst),
+              onPressed:
+                  () =>
+                      Navigator.of(context).popUntil((route) => route.isFirst),
               child: const Text('На главную'),
             ),
           ],

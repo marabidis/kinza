@@ -1,88 +1,87 @@
 import 'dart:convert';
+import 'dart:developer' as dev;
 
 import 'package:intl/intl.dart';
 import 'package:kinza/core/services/api_client.dart';
 import 'package:kinza/core/services/time_service.dart';
 
-/// Модель заказа, которую сериализуем в Strapi.
 class Order {
-  final int orderNumber;
-  final String details;
-  final int totalPrice;
-  final String shippingAddress;
-  final String paymentMethod;
-  final String phone;
-  final DateTime timeOrder;
-
   Order({
     required this.orderNumber,
-    required this.details,
     required this.totalPrice,
     required this.shippingAddress,
     required this.paymentMethod,
     required this.phone,
+    required this.details,
     DateTime? timeOrder,
   }) : timeOrder = timeOrder ?? DateTime.parse(TimeService.getCurrentTime());
 
-  Map<String, dynamic> toJson() {
-    return {
-      'orderNumber': orderNumber,
-      'details': details,
-      'total_price': totalPrice,
-      'shipping_address': shippingAddress,
-      'payment_method': paymentMethod,
-      'phone': phone,
-      'order_date':
-          DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(timeOrder.toUtc()),
-    };
-  }
+  final int orderNumber;
+  final int totalPrice;
+  final String shippingAddress;
+  final String paymentMethod;
+  final String phone;
+  final String details;
+  final DateTime timeOrder;
+
+  Map<String, dynamic> toJson() => {
+    'orderNumber': orderNumber,
+    'total_price': totalPrice,
+    'shipping_address': shippingAddress,
+    'payment_method': paymentMethod,
+    'phone': phone,
+    'details': details,
+    'order_date': DateFormat(
+      "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+    ).format(timeOrder.toUtc()),
+  };
 }
 
-/// Сервис для работы с /orders в Strapi.
 class OrderService {
   OrderService({ApiClient? apiClient}) : _api = apiClient ?? ApiClient.instance;
-
   final ApiClient _api;
 
-  /// Создаёт заказ и возвращает его id.
-  ///
-  /// Бросает [Exception] если сервер вернул ≠ 2xx.
   Future<String> createOrder({
     required String jwt,
     required String phone,
     required String address,
     required String payment,
-    String? comment,
     required int total,
+    String? comment,
   }) async {
-    // Собираем Order — номер можете генерировать на бекенде,
-    // здесь даём 0 и Strapi создаст сам.
     final order = Order(
       orderNumber: 0,
-      details: comment ?? '',
       totalPrice: total,
       shippingAddress: address,
       paymentMethod: payment,
       phone: phone,
+      details: comment ?? '',
     );
 
     final uri = Uri.parse('${_api.baseUrl}/orders');
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${jwt.trim()}',
+    };
+
+    dev.log('📜 POST $uri', name: 'OrderService');
+    dev.log('📜 headers → $headers', name: 'OrderService');
+
     final res = await _api.client.post(
       uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $jwt',
-      },
+      headers: headers,
       body: jsonEncode({'data': order.toJson()}),
     );
 
+    dev.log('📜 status ${res.statusCode}', name: 'OrderService');
+    dev.log(res.body, name: 'OrderService');
+
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      final json = jsonDecode(res.body) as Map<String, dynamic>;
-      return json['data']['id'].toString();
+      final id = (jsonDecode(res.body) as Map<String, dynamic>)['data']['id'];
+      return id.toString();
     }
 
-    throw Exception(
-      'OrderService: status ${res.statusCode}, body ${res.body}',
-    );
+    throw Exception('OrderService: ${res.statusCode} ${res.body}');
   }
 }

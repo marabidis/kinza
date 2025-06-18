@@ -50,25 +50,22 @@ class AppTheme {
 
   /*──────────────── DECORATIONS ───────────────────*/
   static BoxDecoration cardDecoration(BuildContext ctx) => BoxDecoration(
-        color: Theme.of(ctx).cardColor,
-        borderRadius: BorderRadius.circular(cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(ctx).colorScheme.shadow.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      );
+    color: Theme.of(ctx).cardColor,
+    borderRadius: BorderRadius.circular(cardRadius),
+    boxShadow: [
+      BoxShadow(
+        color: Theme.of(ctx).colorScheme.shadow.withOpacity(0.08),
+        blurRadius: 12,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  );
 
   static BoxDecoration priceTagDecoration(BuildContext ctx) => BoxDecoration(
-        color: Theme.of(ctx).colorScheme.surface,
-        borderRadius: BorderRadius.circular(priceTagRadius),
-        border: Border.all(
-          color: Theme.of(ctx).colorScheme.outline,
-          width: 1.2,
-        ),
-      );
+    color: Theme.of(ctx).colorScheme.surface,
+    borderRadius: BorderRadius.circular(priceTagRadius),
+    border: Border.all(color: Theme.of(ctx).colorScheme.outline, width: 1.2),
+  );
 
   /*──────────────── THEME (LIGHT) ─────────────────*/
   static final ThemeData lightTheme = ThemeData(
@@ -83,8 +80,8 @@ class AppTheme {
       onError: Colors.white,
       surface: Colors.white,
       onSurface: Color(0xFF1D1E20),
-      surfaceContainerHighest: Color(0xFFF9F9FB), // чуть контрастнее стекло
-      onSurfaceVariant: Color(0xFF4A505E), // темнее подписи
+      surfaceContainerHighest: Color(0xFFF9F9FB),
+      onSurfaceVariant: Color(0xFF4A505E),
       outline: gray300,
       outlineVariant: gray200,
       shadow: Color(0x331D1E20),
@@ -104,14 +101,8 @@ class AppTheme {
         fontWeight: FontWeight.w700,
         color: Color(0xFF1D1E20),
       ),
-      bodyMedium: TextStyle(
-        fontSize: 16,
-        color: Color(0xFF4A505E), // обновлено
-      ),
-      bodySmall: TextStyle(
-        fontSize: 14,
-        color: Color(0xFF6A7282),
-      ),
+      bodyMedium: TextStyle(fontSize: 16, color: Color(0xFF4A505E)),
+      bodySmall: TextStyle(fontSize: 14, color: Color(0xFF6A7282)),
       labelLarge: TextStyle(
         fontSize: priceTagFontSize,
         fontWeight: FontWeight.w700,
@@ -120,11 +111,11 @@ class AppTheme {
       ),
     ),
     dividerColor: gray300,
-    cardTheme: const CardTheme(
+    cardTheme: const CardThemeData(
       color: Colors.white,
       elevation: 2,
       shadowColor: Color(0x331D1E20),
-      margin: EdgeInsets.zero,
+      surfaceTintColor: Colors.transparent,
     ),
   );
 
@@ -162,14 +153,8 @@ class AppTheme {
         fontWeight: FontWeight.w700,
         color: darkText,
       ),
-      bodyMedium: TextStyle(
-        fontSize: 16,
-        color: darkSecondaryTxt,
-      ),
-      bodySmall: TextStyle(
-        fontSize: 14,
-        color: darkSecondaryTxt,
-      ),
+      bodyMedium: TextStyle(fontSize: 16, color: darkSecondaryTxt),
+      bodySmall: TextStyle(fontSize: 14, color: darkSecondaryTxt),
       labelLarge: TextStyle(
         fontSize: priceTagFontSize,
         fontWeight: FontWeight.w700,
@@ -178,11 +163,11 @@ class AppTheme {
       ),
     ),
     dividerColor: darkOutline,
-    cardTheme: const CardTheme(
+    cardTheme: const CardThemeData(
       color: darkCard,
       elevation: 2,
       shadowColor: Color(0x66101214),
-      margin: EdgeInsets.zero,
+      surfaceTintColor: Colors.transparent,
     ),
   );
 }
