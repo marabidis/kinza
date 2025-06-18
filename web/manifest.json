@@ -1,6 +1,6 @@
 {
-    "name": "flutter_kinza",
-    "short_name": "flutter_kinza",
+    "name": "kinza",
+    "short_name": "kinza",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
