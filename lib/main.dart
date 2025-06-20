@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kinza/core/constants/config.dart';
+import 'package:kinza/core/models/address.dart';
 import 'package:kinza/core/models/cart_item.dart';
 import 'package:kinza/core/services/api_client.dart';
 import 'package:kinza/core/theme/app_theme.dart';
@@ -24,14 +26,13 @@ Future<void> main() async {
   ]);
 
   await Hive.initFlutter();
-  Hive.registerAdapter(CartItemAdapter());
+  Hive
+    ..registerAdapter(CartItemAdapter())
+    ..registerAdapter(AddressAdapter());
 
   log('API_BASE_URL: ${Config.apiBaseUrl}');
 
-  // ★ берём singleton
-  final apiClient = ApiClient.instance;
-
-  runApp(MyApp(apiClient: apiClient));
+  runApp(MyApp(apiClient: ApiClient.instance));
 }
 
 class MyApp extends StatelessWidget {
