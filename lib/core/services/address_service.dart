@@ -13,30 +13,39 @@ class AddressService {
   final ApiClient _api;
   final Box<Address> _box;
 
-  Future<String?> _jwt() => PhoneAuthService().token;
+  Future<String?> get _jwt async => PhoneAuthService().token;
 
-  Future<List<Address>> fetchRemote() async {
-    final tok = await _jwt();
+  /// Загружает адреса текущего пользователя (/users/me?populate=addresses).
+  Future<List<Address>> fetchForCurrentUser() async {
+    final tok = await _jwt;
     if (tok == null) return _box.values.toList();
 
     final res = await _api.client.get(
-      Uri.parse('${_api.baseUrl}/addresses'),
+      Uri.parse('${_api.baseUrl}/users/me?populate=addresses'),
       headers: {'Authorization': 'Bearer $tok'},
     );
+
     if (res.statusCode == 200) {
+      final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+      final attrs = decoded['data']['attributes'] as Map<String, dynamic>;
+      final raw = attrs['addresses']?['data'] as List<dynamic>? ?? [];
+
+      // парсим каждую запись в Address
       final list =
-          (jsonDecode(res.body)['data'] as List)
-              .map((e) => Address.fromJson(e))
-              .toList();
+          raw.cast<Map<String, dynamic>>().map(Address.fromJson).toList();
+
       await _box.clear();
       await _box.addAll(list);
       return list;
     }
+
+    // на не-200 возвращаем локальный кеш
     return _box.values.toList();
   }
 
+  /// Создаёт новый адрес на сервере и сохраняет в Hive.
   Future<Address?> create(Address addr) async {
-    final tok = await _jwt();
+    final tok = await _jwt;
     if (tok == null) return null;
 
     final res = await _api.client.post(
@@ -49,16 +58,20 @@ class AddressService {
     );
 
     if (res.statusCode == 200 || res.statusCode == 201) {
-      final created = Address.fromJson(jsonDecode(res.body)['data']);
+      final data = (jsonDecode(res.body)['data'] as Map<String, dynamic>);
+      final created = Address.fromJson(data);
       await _box.add(created);
       return created;
     }
+
     return null;
   }
 
+  /// Обновляет адрес на сервере и в Hive.
   Future<bool> update(Address addr) async {
-    final tok = await _jwt();
+    final tok = await _jwt;
     if (tok == null) return false;
+
     final res = await _api.client.put(
       Uri.parse('${_api.baseUrl}/addresses/${addr.id}'),
       headers: {
@@ -67,27 +80,43 @@ class AddressService {
       },
       body: jsonEncode({'data': addr.toJson()}),
     );
+
     if (res.statusCode == 200) {
       final idx = _box.values.toList().indexWhere((e) => e.id == addr.id);
-      if (idx != -1) _box.putAt(idx, addr);
+      if (idx != -1) {
+        await _box.putAt(idx, addr);
+      }
       return true;
     }
+
     return false;
   }
 
+  /// Удаляет адрес на сервере и из Hive.
   Future<bool> delete(int id) async {
-    final tok = await _jwt();
+    final tok = await _jwt;
     if (tok == null) return false;
+
     final res = await _api.client.delete(
       Uri.parse('${_api.baseUrl}/addresses/$id'),
       headers: {'Authorization': 'Bearer $tok'},
     );
-    if (res.statusCode == 200) {
-      _box.values.where((e) => e.id == id).forEach((e) => e.delete());
-      return true;
+    if (res.statusCode != 200) return false;
+
+    // удаляем все записи с этим id
+    final keysToDelete =
+        _box.keys.where((k) {
+          final a = _box.get(k);
+          return a != null && a.id == id;
+        }).toList();
+
+    for (final key in keysToDelete) {
+      await _box.delete(key);
     }
-    return false;
+
+    return true;
   }
 
+  /// Локальный кеш.
   List<Address> get cached => _box.values.toList();
 }

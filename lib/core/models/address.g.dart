@@ -8,7 +8,7 @@ part of 'address.dart';
 
 class AddressAdapter extends TypeAdapter<Address> {
   @override
-  final int typeId = 3;
+  final int typeId = 31;
 
   @override
   Address read(BinaryReader reader) {
@@ -18,7 +18,7 @@ class AddressAdapter extends TypeAdapter<Address> {
     };
     return Address(
       id: fields[0] as int,
-      type: fields[1] as String,
+      type: fields[1] as AddressType,
       street: fields[2] as String,
       house: fields[3] as String,
       flat: fields[4] as String?,
@@ -60,6 +60,50 @@ class AddressAdapter extends TypeAdapter<Address> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is AddressAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class AddressTypeAdapter extends TypeAdapter<AddressType> {
+  @override
+  final int typeId = 30;
+
+  @override
+  AddressType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return AddressType.home;
+      case 1:
+        return AddressType.work;
+      case 2:
+        return AddressType.other;
+      default:
+        return AddressType.home;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, AddressType obj) {
+    switch (obj) {
+      case AddressType.home:
+        writer.writeByte(0);
+        break;
+      case AddressType.work:
+        writer.writeByte(1);
+        break;
+      case AddressType.other:
+        writer.writeByte(2);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AddressTypeAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

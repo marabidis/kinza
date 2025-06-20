@@ -45,5 +45,13 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<key>YMKApiKey</key>
+	<string>3a051a6f-cb3c-475e-9e0a-fcec8b7ce86c</string>
+
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Нам нужен доступ к вашей геопозиции, чтобы подсказать адрес доставки.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Нам нужен доступ к вашей геопозиции, чтобы подсказать адрес доставки.</string>
 </dict>
 </plist>

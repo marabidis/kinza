@@ -28,10 +28,14 @@ Future<void> main() async {
   await Hive.initFlutter();
   Hive
     ..registerAdapter(CartItemAdapter())
+    ..registerAdapter(AddressTypeAdapter())
     ..registerAdapter(AddressAdapter());
 
-  log('API_BASE_URL: ${Config.apiBaseUrl}');
+  // Открываем обе коробки до запуска UI
+  await Hive.openBox<CartItem>('cartBox');
+  await Hive.openBox<Address>('addresses');
 
+  log('API_BASE_URL: ${Config.apiBaseUrl}');
   runApp(MyApp(apiClient: ApiClient.instance));
 }
 

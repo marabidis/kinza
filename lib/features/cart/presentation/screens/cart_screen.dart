@@ -3,9 +3,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
+import 'package:kinza/core/models/address.dart';
 import 'package:kinza/core/models/cart_item.dart';
 import 'package:kinza/core/models/delivery_method.dart';
 import 'package:kinza/core/services/order_helpers.dart';
+import 'package:kinza/features/address/presentation/screens/address_list_screen.dart';
 import 'package:kinza/features/cart/presentation/screens/checkout_screen.dart';
 import 'package:kinza/features/cart/presentation/widgets/cart_item_widget.dart';
 import 'package:kinza/features/cart/presentation/widgets/empty_cart_screen.dart';
@@ -20,6 +22,7 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   late Box<CartItem> cartBox;
+  late Box<Address> _addressBox;
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   final ValueNotifier<DeliveryMethod> _deliveryMethodNotifier =
@@ -28,15 +31,28 @@ class _CartScreenState extends State<CartScreen> {
   int _lastTotalSum = 0;
   bool _isLoading = true;
 
+  /// Текущий выбранный адрес (м.б. null, если пользователь ещё не выбирал)
+  Address? _selectedAddress;
+
   @override
   void initState() {
     super.initState();
-    _initCart();
+    _initData();
   }
 
-  Future<void> _initCart() async {
+  Future<void> _initData() async {
+    // Открываем коробки
     cartBox = await Hive.openBox<CartItem>('cartBox');
+    _addressBox = await Hive.openBox<Address>('addresses');
+    // Инициализируем сумму
     _lastTotalSum = getTotalSum(cartBox);
+    // Получаем закешированные адреса (можно позже заменить на fetchForCurrentUser)
+    if (_addressBox.isNotEmpty) {
+      _selectedAddress = _addressBox.values.firstWhere(
+        (a) => a.isDefault,
+        orElse: () => _addressBox.values.first,
+      );
+    }
     setState(() => _isLoading = false);
   }
 
@@ -67,44 +83,52 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: _buildAppBar(cs, txt, dark),
-      body: isEmpty ? const EmptyCartScreen() : _buildCartList(cs),
+      body: isEmpty ? const EmptyCartScreen() : _buildCartList(cs, txt),
       bottomNavigationBar: isEmpty ? null : _buildBottomBar(totalSum, cs, txt),
     );
   }
 
   AppBar _buildAppBar(ColorScheme cs, TextTheme txt, bool dark) => AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(color: cs.onSurface),
-        title: Text(
-          'Ваш заказ',
-          style: txt.titleLarge?.copyWith(
-            color: cs.onSurface,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        systemOverlayStyle:
-            dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              color: dark
+    elevation: 0,
+    backgroundColor: Colors.transparent,
+    iconTheme: IconThemeData(color: cs.onSurface),
+    title: Text(
+      'Ваш заказ',
+      style: txt.titleLarge?.copyWith(
+        color: cs.onSurface,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    systemOverlayStyle:
+        dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+    flexibleSpace: ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          color:
+              dark
                   ? Colors.black.withOpacity(.30)
                   : Colors.white.withOpacity(.25),
-            ),
-          ),
         ),
-      );
+      ),
+    ),
+  );
 
   /*────────────────────────── Cart list ───────────────────────────*/
 
-  Widget _buildCartList(ColorScheme cs) {
+  Widget _buildCartList(ColorScheme cs, TextTheme txt) {
     return SingleChildScrollView(
       controller: _scrollController,
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         children: [
+          const SizedBox(height: 18),
+
+          /// ── Блок адреса ──────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildAddressHeader(cs, txt),
+          ),
           const SizedBox(height: 18),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -124,6 +148,57 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+  /// Карточка адреса
+  Widget _buildAddressHeader(ColorScheme cs, TextTheme txt) {
+    final hasAddress = _selectedAddress != null;
+    return GestureDetector(
+      onTap: _openAddressSelector,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child:
+                  hasAddress
+                      ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _selectedAddress!.typeLabel,
+                            style: txt.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _selectedAddress!.fullLine,
+                            style: txt.bodySmall?.copyWith(color: cs.outline),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      )
+                      : Text(
+                        'Добавить адрес доставки',
+                        style: txt.bodyLarge?.copyWith(
+                          color: cs.primary,
+                          height: 1.1,
+                        ),
+                      ),
+            ),
+            const Icon(Icons.chevron_right_rounded),
+          ],
+        ),
       ),
     );
   }
@@ -149,10 +224,10 @@ class _CartScreenState extends State<CartScreen> {
           child: CartItemWidget(
             item: item,
             onDelete: () => _deleteItemFromCart(idx),
-            onQuantityChanged: (q) =>
-                _updateCartItem(idx, item.copyWith(quantity: q)),
-            onWeightChanged: (w) =>
-                _updateCartItem(idx, item.copyWith(weight: w)),
+            onQuantityChanged:
+                (q) => _updateCartItem(idx, item.copyWith(quantity: q)),
+            onWeightChanged:
+                (w) => _updateCartItem(idx, item.copyWith(weight: w)),
             isLastItem: isLast,
           ),
         ),
@@ -163,7 +238,6 @@ class _CartScreenState extends State<CartScreen> {
   /*────────────────────────── Bottom bar ──────────────────────────*/
 
   Widget _buildBottomBar(int totalSum, ColorScheme cs, TextTheme txt) {
-    // Анимация суммы
     if (_lastTotalSum != totalSum) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _lastTotalSum = totalSum);
@@ -172,8 +246,8 @@ class _CartScreenState extends State<CartScreen> {
 
     final canCheckout =
         _deliveryMethodNotifier.value == DeliveryMethod.pickup ||
-            (_deliveryMethodNotifier.value == DeliveryMethod.courier &&
-                totalSum >= 800);
+        (_deliveryMethodNotifier.value == DeliveryMethod.courier &&
+            totalSum >= 800);
 
     return Container(
       decoration: BoxDecoration(
@@ -233,10 +307,19 @@ class _CartScreenState extends State<CartScreen> {
     final totalSum = getTotalSum(cartBox);
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => CheckoutScreen(total: totalSum),
-      ),
+      MaterialPageRoute(builder: (_) => CheckoutScreen(total: totalSum)),
     );
+  }
+
+  Future<void> _openAddressSelector() async {
+    final chosen = await Navigator.push<Address?>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddressListScreen()),
+    );
+
+    if (chosen != null) {
+      setState(() => _selectedAddress = chosen);
+    }
   }
 
   void _deleteItemFromCart(int index) {
