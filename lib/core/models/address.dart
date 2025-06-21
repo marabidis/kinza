@@ -1,13 +1,49 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 part 'address.g.dart';
 
-@HiveType(typeId: 3)
-class Address extends HiveObject {
+/// Тип адреса
+@HiveType(typeId: 30)
+enum AddressType {
   @HiveField(0)
-  final int id; // Strapi id
+  home,
   @HiveField(1)
-  final String type; // home / work / other
+  work,
+  @HiveField(2)
+  other;
+
+  /// короткая подпись
+  String get label {
+    switch (this) {
+      case AddressType.home:
+        return 'Дом';
+      case AddressType.work:
+        return 'Работа';
+      case AddressType.other:
+      default:
+        return 'Другое';
+    }
+  }
+
+  /// создание из API-строки
+  static AddressType fromApi(String? v) => AddressType.values.firstWhere(
+    (e) => e.name == v,
+    orElse: () => AddressType.other,
+  );
+
+  /// в JSON отдаём имя
+  String get api => name;
+}
+
+/// Модель адреса
+@immutable
+@HiveType(typeId: 31)
+class Address {
+  @HiveField(0)
+  final int id;
+  @HiveField(1)
+  final AddressType type;
   @HiveField(2)
   final String street;
   @HiveField(3)
@@ -23,7 +59,7 @@ class Address extends HiveObject {
   @HiveField(8)
   final bool isDefault;
 
-  Address({
+  const Address({
     required this.id,
     required this.type,
     required this.street,
@@ -35,11 +71,21 @@ class Address extends HiveObject {
     this.isDefault = false,
   });
 
+  String get typeLabel => type.label;
+
+  String get fullLine {
+    final buf = StringBuffer('$street, $house');
+    if (flat != null && flat!.trim().isNotEmpty) {
+      buf.write(', кв. $flat');
+    }
+    return buf.toString();
+  }
+
   factory Address.fromJson(Map<String, dynamic> j) {
-    final a = j['attributes'] ?? j;
+    final a = j['attributes'] as Map<String, dynamic>? ?? j;
     return Address(
       id: j['id'] as int,
-      type: a['type'] as String,
+      type: AddressType.fromApi(a['type'] as String?),
       street: a['street'] as String,
       house: a['house'] as String,
       flat: a['flat'] as String?,
@@ -50,14 +96,16 @@ class Address extends HiveObject {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'type': type,
-    'street': street,
-    'house': house,
-    if (flat != null) 'flat': flat,
-    if (comment != null) 'comment': comment,
-    if (lat != null) 'lat': lat,
-    if (lng != null) 'lng': lng,
-    'isDefault': isDefault,
-  };
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type.api,
+      'street': street,
+      'house': house,
+      'isDefault': isDefault,
+      if (flat != null) 'flat': flat,
+      if (comment != null) 'comment': comment,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+    };
+  }
 }

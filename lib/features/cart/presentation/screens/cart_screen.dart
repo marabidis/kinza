@@ -1,11 +1,16 @@
+// lib/features/cart/presentation/screens/cart_screen.dart
+
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
+import 'package:kinza/core/models/address.dart';
 import 'package:kinza/core/models/cart_item.dart';
 import 'package:kinza/core/models/delivery_method.dart';
+import 'package:kinza/core/services/address_service.dart';
 import 'package:kinza/core/services/order_helpers.dart';
+import 'package:kinza/features/address/presentation/screens/address_list_screen.dart';
 import 'package:kinza/features/cart/presentation/screens/checkout_screen.dart';
 import 'package:kinza/features/cart/presentation/widgets/cart_item_widget.dart';
 import 'package:kinza/features/cart/presentation/widgets/empty_cart_screen.dart';
@@ -28,10 +33,15 @@ class _CartScreenState extends State<CartScreen> {
   int _lastTotalSum = 0;
   bool _isLoading = true;
 
+  /// Загруженные адреса и выбранный адрес
+  late Future<List<Address>> _addressesFuture;
+  Address? _selectedAddress;
+
   @override
   void initState() {
     super.initState();
     _initCart();
+    _addressesFuture = AddressService().fetchForCurrentUser();
   }
 
   Future<void> _initCart() async {
@@ -39,8 +49,6 @@ class _CartScreenState extends State<CartScreen> {
     _lastTotalSum = getTotalSum(cartBox);
     setState(() => _isLoading = false);
   }
-
-  /*───────────────────────────── UI ───────────────────────────────*/
 
   @override
   Widget build(BuildContext context) {
@@ -73,31 +81,30 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   AppBar _buildAppBar(ColorScheme cs, TextTheme txt, bool dark) => AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(color: cs.onSurface),
-        title: Text(
-          'Ваш заказ',
-          style: txt.titleLarge?.copyWith(
-            color: cs.onSurface,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        systemOverlayStyle:
-            dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              color: dark
+    elevation: 0,
+    backgroundColor: Colors.transparent,
+    iconTheme: IconThemeData(color: cs.onSurface),
+    title: Text(
+      'Ваш заказ',
+      style: txt.titleLarge?.copyWith(
+        color: cs.onSurface,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    systemOverlayStyle:
+        dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+    flexibleSpace: ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          color:
+              dark
                   ? Colors.black.withOpacity(.30)
                   : Colors.white.withOpacity(.25),
-            ),
-          ),
         ),
-      );
-
-  /*────────────────────────── Cart list ───────────────────────────*/
+      ),
+    ),
+  );
 
   Widget _buildCartList(ColorScheme cs) {
     return SingleChildScrollView(
@@ -106,6 +113,15 @@ class _CartScreenState extends State<CartScreen> {
       child: Column(
         children: [
           const SizedBox(height: 18),
+
+          // ─── Блок выбора адреса ──────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildAddressHeader(cs, Theme.of(context).textTheme),
+          ),
+          const SizedBox(height: 18),
+
+          // ─── Список товаров ──────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: AnimatedList(
@@ -114,11 +130,9 @@ class _CartScreenState extends State<CartScreen> {
               physics: const NeverScrollableScrollPhysics(),
               initialItemCount: cartBox.length,
               itemBuilder: (context, index, anim) {
-                final item = cartBox.getAt(index);
+                final item = cartBox.getAt(index)!;
                 final isLast = index == cartBox.length - 1;
-                return item != null
-                    ? _buildCartItem(item, index, anim, isLast, cs)
-                    : const SizedBox.shrink();
+                return _buildCartItem(item, index, anim, isLast, cs);
               },
             ),
           ),
@@ -126,6 +140,62 @@ class _CartScreenState extends State<CartScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildAddressHeader(ColorScheme cs, TextTheme txt) {
+    final hasAddress = _selectedAddress != null;
+    return GestureDetector(
+      onTap: _pickAddress,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on_outlined, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child:
+                  hasAddress
+                      ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _selectedAddress!.typeLabel,
+                            style: txt.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            _selectedAddress!.fullLine,
+                            style: txt.bodySmall?.copyWith(color: cs.outline),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      )
+                      : Text(
+                        'Выбрать адрес доставки',
+                        style: txt.bodyLarge?.copyWith(color: cs.primary),
+                      ),
+            ),
+            const Icon(Icons.chevron_right_rounded),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAddress() async {
+    final chosen = await Navigator.push<Address?>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddressListScreen()),
+    );
+    if (chosen != null) {
+      setState(() => _selectedAddress = chosen);
+    }
   }
 
   Widget _buildCartItem(
@@ -149,10 +219,10 @@ class _CartScreenState extends State<CartScreen> {
           child: CartItemWidget(
             item: item,
             onDelete: () => _deleteItemFromCart(idx),
-            onQuantityChanged: (q) =>
-                _updateCartItem(idx, item.copyWith(quantity: q)),
-            onWeightChanged: (w) =>
-                _updateCartItem(idx, item.copyWith(weight: w)),
+            onQuantityChanged:
+                (q) => _updateCartItem(idx, item.copyWith(quantity: q)),
+            onWeightChanged:
+                (w) => _updateCartItem(idx, item.copyWith(weight: w)),
             isLastItem: isLast,
           ),
         ),
@@ -160,10 +230,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  /*────────────────────────── Bottom bar ──────────────────────────*/
-
   Widget _buildBottomBar(int totalSum, ColorScheme cs, TextTheme txt) {
-    // Анимация суммы
     if (_lastTotalSum != totalSum) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _lastTotalSum = totalSum);
@@ -172,8 +239,8 @@ class _CartScreenState extends State<CartScreen> {
 
     final canCheckout =
         _deliveryMethodNotifier.value == DeliveryMethod.pickup ||
-            (_deliveryMethodNotifier.value == DeliveryMethod.courier &&
-                totalSum >= 800);
+        (_deliveryMethodNotifier.value == DeliveryMethod.courier &&
+            totalSum >= 800);
 
     return Container(
       decoration: BoxDecoration(
@@ -227,15 +294,11 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  /*──────────────────────────── Helpers ───────────────────────────*/
-
   void _openCheckout() {
     final totalSum = getTotalSum(cartBox);
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => CheckoutScreen(total: totalSum),
-      ),
+      MaterialPageRoute(builder: (_) => CheckoutScreen(total: totalSum)),
     );
   }
 

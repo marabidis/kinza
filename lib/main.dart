@@ -17,28 +17,37 @@ import 'package:timezone/data/latest.dart' as tz;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Таймзоны и локализация
   tz.initializeTimeZones();
   await initializeDateFormatting('ru_RU');
 
+  // Только портрет
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
+  // Инициализация Hive
   await Hive.initFlutter();
+
+  // Регистрируем адаптеры
   Hive
-    ..registerAdapter(CartItemAdapter())
-    ..registerAdapter(AddressAdapter());
+    ..registerAdapter(AddressTypeAdapter())
+    ..registerAdapter(AddressAdapter())
+    ..registerAdapter(CartItemAdapter());
+
+  // Открываем боксы ДО запуска UI
+  await Hive.openBox<CartItem>('cartBox');
+  await Hive.openBox<Address>('addresses');
 
   log('API_BASE_URL: ${Config.apiBaseUrl}');
-
   runApp(MyApp(apiClient: ApiClient.instance));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({required this.apiClient, super.key});
-
   final ApiClient apiClient;
+
+  const MyApp({required this.apiClient, super.key});
 
   @override
   Widget build(BuildContext context) {
