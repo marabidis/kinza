@@ -1,41 +1,53 @@
+// lib/main.dart
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:kinza/core/constants/config.dart';
+import 'package:kinza/core/models/address.dart';
+import 'package:kinza/core/models/cart_item.dart';
+import 'package:kinza/core/services/api_client.dart';
+import 'package:kinza/core/theme/app_theme.dart';
+import 'package:kinza/core/theme/themed_system_ui.dart';
+import 'package:kinza/features/splash/presentation/screens/splash_screen.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
-import 'models/cart_item.dart';
-import 'ui/screens/splash_screen.dart';
-import 'config.dart';
-import 'theme/app_theme.dart';
-import 'theme/themed_system_ui.dart'; // <--- добавь импорт
-import 'services/api_client.dart';
-
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: "assets/.env");
+  // Таймзоны и локализация
   tz.initializeTimeZones();
   await initializeDateFormatting('ru_RU');
 
+  // Только портрет
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
+  // Инициализация Hive
   await Hive.initFlutter();
-  Hive.registerAdapter(CartItemAdapter());
 
-  final apiClient = ApiClient();
-  runApp(MyApp(apiClient: apiClient));
+  // Регистрируем адаптеры
+  Hive
+    ..registerAdapter(AddressTypeAdapter())
+    ..registerAdapter(AddressAdapter())
+    ..registerAdapter(CartItemAdapter());
+
+  // Открываем боксы ДО запуска UI
+  await Hive.openBox<CartItem>('cartBox');
+  await Hive.openBox<Address>('addresses');
+
+  log('API_BASE_URL: ${Config.apiBaseUrl}');
+  runApp(MyApp(apiClient: ApiClient.instance));
 }
 
 class MyApp extends StatelessWidget {
   final ApiClient apiClient;
 
-  const MyApp({required this.apiClient, Key? key}) : super(key: key);
+  const MyApp({required this.apiClient, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -45,10 +57,7 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      // 👇 здесь обернули SplashScreen в ThemedSystemUI
-      home: ThemedSystemUI(
-        child: SplashScreen(apiClient: apiClient),
-      ),
+      home: ThemedSystemUI(child: SplashScreen(apiClient: apiClient)),
     );
   }
 }

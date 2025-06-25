@@ -1,4 +1,4 @@
-# flutter_kinza
+# kinza
 
 A new Flutter project.
 
