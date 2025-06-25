@@ -13,7 +13,6 @@ enum AddressType {
   @HiveField(2)
   other;
 
-  /// короткая подпись
   String get label {
     switch (this) {
       case AddressType.home:
@@ -26,17 +25,14 @@ enum AddressType {
     }
   }
 
-  /// создание из API-строки
   static AddressType fromApi(String? v) => AddressType.values.firstWhere(
     (e) => e.name == v,
     orElse: () => AddressType.other,
   );
 
-  /// в JSON отдаём имя
   String get api => name;
 }
 
-/// Модель адреса
 @immutable
 @HiveType(typeId: 31)
 class Address {
@@ -96,8 +92,9 @@ class Address {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
+  /// Собираем JSON для Strapi; userId подставляется в сервисе
+  Map<String, dynamic> toJson({int? userId}) {
+    final m = <String, dynamic>{
       'type': type.api,
       'street': street,
       'house': house,
@@ -107,5 +104,9 @@ class Address {
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
     };
+    if (userId != null) {
+      m['user'] = userId;
+    }
+    return m;
   }
 }

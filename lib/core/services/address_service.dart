@@ -1,118 +1,134 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive/hive.dart';
+import 'package:kinza/core/constants/storage_keys.dart';
 import 'package:kinza/core/models/address.dart';
 import 'package:kinza/core/services/api_client.dart';
-import 'package:kinza/core/services/phone_auth_service.dart';
 
 class AddressService {
-  AddressService({ApiClient? api})
-    : _api = api ?? ApiClient.instance,
-      _box = Hive.box<Address>('addresses');
+  AddressService({ApiClient? apiClient})
+    : _api = apiClient ?? ApiClient.instance,
+      _storage = const FlutterSecureStorage();
 
-  final ApiClient _api;
-  final Box<Address> _box;
+  final ApiClient _api; // baseUrl уже оканчивается на /api
+  final FlutterSecureStorage _storage;
+  final Box<Address> _box = Hive.box<Address>('addresses');
 
-  Future<String?> get _jwt async => PhoneAuthService().token;
+  Future<String?> get _jwt async => _storage.read(key: kJwtKey);
 
-  /// Загружает адреса текущего пользователя
+  /*────────────────────────── LOAD ──────────────────────────*/
   Future<List<Address>> fetchForCurrentUser() async {
-    final tok = await _jwt;
-    if (tok == null) return _box.values.toList();
+    final token = await _jwt;
+    if (token == null) return _box.values.toList();
 
+    final uri = Uri.parse('${_api.baseUrl}/users/me?populate=addresses');
     final res = await _api.client.get(
-      Uri.parse('${_api.baseUrl}/users/me?populate=addresses'),
-      headers: {'Authorization': 'Bearer $tok'},
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
     );
 
-    if (res.statusCode == 200) {
-      final decoded = jsonDecode(res.body) as Map<String, dynamic>;
-      final attrs = (decoded['data']['attributes'] as Map<String, dynamic>);
-      final raw = attrs['addresses']?['data'] as List<dynamic>? ?? [];
+    debugPrint('fetch() ${res.statusCode} ${res.request?.url}');
 
-      final list =
-          raw.cast<Map<String, dynamic>>().map(Address.fromJson).toList();
-
-      await _box.clear();
-      await _box.addAll(list);
-      return list;
+    if (res.statusCode != 200) {
+      throw Exception('Не удалось получить адреса: ${res.statusCode}');
     }
 
-    // если не 200, вернём локальный кеш
-    return _box.values.toList();
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+
+    // addrField бывает [] или {data:[…]}
+    final addrField = body['addresses'];
+    List<dynamic> raw;
+    if (addrField is Map<String, dynamic>) {
+      raw = addrField['data'] as List<dynamic>? ?? [];
+    } else if (addrField is List) {
+      raw = addrField;
+    } else {
+      raw = [];
+    }
+
+    final list =
+        raw
+            .cast<Map<String, dynamic>>()
+            .map(Address.fromJson) // безопасно
+            .toList();
+
+    _box
+      ..clear()
+      ..addAll(list);
+
+    return list;
   }
 
-  /// Создаёт новый адрес
+  /*────────────────────────── CREATE ──────────────────────────*/
   Future<Address?> create(Address addr) async {
-    final tok = await _jwt;
-    if (tok == null) return null;
+    final token = await _jwt;
+    if (token == null) {
+      debugPrint('create() → null jwt');
+      return null;
+    }
+
+    // id текущего пользователя
+    final meRes = await _api.client.get(
+      Uri.parse('${_api.baseUrl}/users/me'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (meRes.statusCode != 200) return null;
+    final userId =
+        (jsonDecode(meRes.body) as Map<String, dynamic>)['id'] as int;
 
     final res = await _api.client.post(
       Uri.parse('${_api.baseUrl}/addresses'),
       headers: {
+        'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $tok',
       },
-      body: jsonEncode({'data': addr.toJson()}),
+      body: jsonEncode({'data': addr.toJson(userId: userId)}),
     );
 
-    if (res.statusCode == 200 || res.statusCode == 201) {
-      final created = Address.fromJson(jsonDecode(res.body)['data']);
-      await _box.add(created);
-      return created;
-    }
-    return null;
+    debugPrint('create() → ${res.statusCode}: ${res.body}');
+    if (res.statusCode != 200 && res.statusCode != 201) return null;
+
+    final created = Address.fromJson(
+      jsonDecode(res.body)['data'] as Map<String, dynamic>,
+    );
+    await _box.add(created);
+    return created;
   }
 
-  /// Обновляет адрес
+  /*────────────────────────── UPDATE ──────────────────────────*/
   Future<bool> update(Address addr) async {
-    final tok = await _jwt;
-    if (tok == null) return false;
+    final token = await _jwt;
+    if (token == null) {
+      debugPrint('update() → null jwt');
+      return false;
+    }
 
-    final res = await _api.client.put(
-      Uri.parse('${_api.baseUrl}/addresses/${addr.id}'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $tok',
-      },
-      body: jsonEncode({'data': addr.toJson()}),
+    final uri = Uri.parse('${_api.baseUrl}/addresses/${addr.id}');
+    final headers = {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
+    final body = jsonEncode({'data': addr.toJson()});
+
+    // ─── временный лог ───
+    debugPrint(
+      'update() → request\n'
+      'URL: $uri\n'
+      'Headers: $headers\n'
+      'Body: $body',
     );
 
+    final res = await _api.client.put(uri, headers: headers, body: body);
+
+    debugPrint('update() → ${res.statusCode}: ${res.body}');
+
     if (res.statusCode == 200) {
-      // находим в кеше и заменяем
-      final idx = _box.values.toList().indexWhere((e) => e.id == addr.id);
-      if (idx != -1) {
-        await _box.putAt(idx, addr);
-      }
+      final i = _box.values.toList().indexWhere((a) => a.id == addr.id);
+      if (i != -1) await _box.putAt(i, addr);
       return true;
     }
     return false;
   }
-
-  /// Удаляет адрес
-  Future<bool> delete(int id) async {
-    final tok = await _jwt;
-    if (tok == null) return false;
-
-    final res = await _api.client.delete(
-      Uri.parse('${_api.baseUrl}/addresses/$id'),
-      headers: {'Authorization': 'Bearer $tok'},
-    );
-    if (res.statusCode != 200) return false;
-
-    // удаляем из локального кеша
-    final keysToDelete =
-        _box.keys.where((key) {
-          final a = _box.get(key);
-          return a != null && a.id == id;
-        }).toList();
-
-    for (final key in keysToDelete) {
-      await _box.delete(key);
-    }
-    return true;
-  }
-
-  /// Локальный кеш
-  List<Address> get cached => _box.values.toList();
 }

@@ -67,15 +67,15 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
       _extraPrice;
 
   CartItem _currentCartItem() => CartItem(
-        id: widget.product.id.toString(),
-        title: widget.product.title,
-        price: (_unitPrice + _extraPrice).toInt(),
-        quantity: _qty,
-        weight: _weight,
-        thumbnailUrl: widget.product.imageUrl?.url,
-        isWeightBased: _isWeightBased,
-        minimumWeight: widget.product.minimumWeight,
-      );
+    id: widget.product.id.toString(),
+    title: widget.product.title,
+    price: (_unitPrice + _extraPrice).toInt(),
+    quantity: _qty,
+    weight: _weight,
+    thumbnailUrl: widget.product.imageUrl?.url,
+    isWeightBased: _isWeightBased,
+    minimumWeight: widget.product.minimumWeight,
+  );
 
   void _addToCartIfFirstTime() {
     if (!_inCart) {
@@ -128,13 +128,14 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black54,
-      builder: (_) => GlassSheetWrapper(
-        child: IngredientCustomizeSheet(
-          options: widget.product.ingredientOptions,
-          initiallySelected: _selected,
-          sheetTitle: widget.product.title,
-        ),
-      ),
+      builder:
+          (_) => GlassSheetWrapper(
+            child: IngredientCustomizeSheet(
+              options: widget.product.ingredientOptions,
+              initiallySelected: _selected,
+              sheetTitle: widget.product.title,
+            ),
+          ),
     );
 
     if (result != null) {
@@ -190,9 +191,10 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
                       'Минимальный заказ: ${(widget.product.minimumWeight! * 1000).toInt()} г',
                       style: txt.bodySmall?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: isLight
-                            ? cs.onSurface.withOpacity(0.8)
-                            : cs.onSurfaceVariant,
+                        color:
+                            isLight
+                                ? cs.onSurface.withOpacity(0.8)
+                                : cs.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -201,9 +203,10 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
                   child: Text(
                     widget.product.description,
                     style: txt.bodyMedium?.copyWith(
-                      color: isLight
-                          ? cs.onSurface.withOpacity(0.9)
-                          : cs.onSurfaceVariant,
+                      color:
+                          isLight
+                              ? cs.onSurface.withOpacity(0.9)
+                              : cs.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -220,15 +223,18 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 6,
-                    children: baseOptions
-                        .map((o) => Chip(
-                              label: Text(o.ingredient.name),
-                              backgroundColor: cs.surfaceContainerHighest,
-                              labelStyle: txt.bodySmall?.copyWith(
-                                color: cs.onSurface,
+                    children:
+                        baseOptions
+                            .map(
+                              (o) => Chip(
+                                label: Text(o.ingredient.name),
+                                backgroundColor: cs.surfaceContainerHighest,
+                                labelStyle: txt.bodySmall?.copyWith(
+                                  color: cs.onSurface,
+                                ),
                               ),
-                            ))
-                        .toList(),
+                            )
+                            .toList(),
                   ),
                 ],
                 if (widget.product.ingredientOptions.isNotEmpty)
@@ -248,8 +254,11 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.chevron_right,
-                              color: cs.primary, size: 20),
+                          Icon(
+                            Icons.chevron_right,
+                            color: cs.primary,
+                            size: 20,
+                          ),
                         ],
                       ),
                     ),
@@ -291,12 +300,14 @@ class _ProductDetailWidgetState extends State<ProductDetailWidget> {
                           onPressed: _toggleCartState,
                           height: 44,
                           borderRadius: 11,
-                          backgroundColor: _inCart
-                              ? cs.surface
-                              : cs.primary.withOpacity(.90),
-                          textColor: _inCart
-                              ? cs.onSurface.withOpacity(.7)
-                              : cs.onPrimary,
+                          backgroundColor:
+                              _inCart
+                                  ? cs.surface
+                                  : cs.primary.withOpacity(.90),
+                          textColor:
+                              _inCart
+                                  ? cs.onSurface.withOpacity(.7)
+                                  : cs.onPrimary,
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
                         ),
@@ -328,11 +339,19 @@ class _HeaderImage extends StatelessWidget {
       child: CachedNetworkImage(
         imageUrl: url,
         fit: BoxFit.cover,
-        placeholder: (_, __) => hash != null
-            ? SizedBox.expand(child: BlurHash(hash: hash))
-            : const Shimmer(size: Size(double.infinity, double.maxFinite)),
-        errorWidget: (_, __, ___) => const Icon(Icons.broken_image_rounded,
-            size: 64, color: Colors.grey),
+        placeholder:
+            (_, __) =>
+                hash != null
+                    ? SizedBox.expand(child: BlurHash(hash: hash))
+                    : const Shimmer(
+                      size: Size(double.infinity, double.maxFinite),
+                    ),
+        errorWidget:
+            (_, __, ___) => const Icon(
+              Icons.broken_image_rounded,
+              size: 64,
+              color: Colors.grey,
+            ),
       ),
     );
   }

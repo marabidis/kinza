@@ -4,6 +4,7 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:kinza/core/constants/storage_keys.dart';
 import 'package:kinza/core/services/api_client.dart';
 
 class PhoneAuthService {
@@ -13,17 +14,14 @@ class PhoneAuthService {
 
   final ApiClient _api;
   final FlutterSecureStorage _storage;
-  static const _jwtKey = 'jwt_token';
 
   /* ───────── helpers ───────── */
 
   String _normalize(String raw) {
     final digits = raw.replaceAll(RegExp(r'\D'), '');
-    final norm =
-        digits.length == 11 && digits.startsWith('8')
-            ? '7${digits.substring(1)}'
-            : digits;
-    return '+$norm';
+    return digits.length == 11 && digits.startsWith('8')
+        ? '+7${digits.substring(1)}'
+        : '+$digits';
   }
 
   Map<String, String> get _json => {'Content-Type': 'application/json'};
@@ -71,7 +69,7 @@ class PhoneAuthService {
         final jwt =
             (jsonDecode(res.body) as Map<String, dynamic>)['jwt'] as String?;
         if (jwt != null) {
-          await _storage.write(key: _jwtKey, value: jwt);
+          await _storage.write(key: kJwtKey, value: jwt); // ⬅︎ единый ключ
           dev.log(
             '📜 jwt (first 32) → ${jwt.substring(0, 32)}…',
             name: 'PhoneAuth',
@@ -92,6 +90,6 @@ class PhoneAuthService {
 
   /* ───────── token helpers ──── */
 
-  Future<String?> get token async => _storage.read(key: _jwtKey);
-  Future<void> logout() => _storage.delete(key: _jwtKey);
+  Future<String?> get token async => _storage.read(key: kJwtKey);
+  Future<void> logout() => _storage.delete(key: kJwtKey);
 }

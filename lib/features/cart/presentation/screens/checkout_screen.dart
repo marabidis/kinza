@@ -1,16 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
+import 'package:kinza/core/models/address.dart';
 import 'package:kinza/core/models/cart_item.dart';
 import 'package:kinza/core/services/order_service.dart';
 import 'package:kinza/core/services/phone_auth_service.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final int total;
-  const CheckoutScreen({super.key, required this.total});
+  final Address? initialAddress;
+
+  const CheckoutScreen({super.key, required this.total, this.initialAddress});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -19,7 +22,7 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   /* ───────────────── controllers ───────────────── */
   final _formKey = GlobalKey<FormState>();
-  final _addrCtrl = TextEditingController();
+  late TextEditingController _addrCtrl;
   final _phoneCtrl = TextEditingController();
   final _commentCtrl = TextEditingController();
   final _phoneMask = MaskTextInputFormatter(
@@ -30,13 +33,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   /* ───────────────── state ───────────────── */
   String _payment = 'card';
   bool _loading = false;
-  DateTime? _lastSend; // для cooldown
+  DateTime? _lastSend;
   Timer? _ticker;
   int _secondsLeft = 0;
 
   /* ───────────────── services ───────────────── */
   final _auth = PhoneAuthService();
   final _order = OrderService();
+
+  @override
+  void initState() {
+    super.initState();
+    _addrCtrl = TextEditingController(
+      text: widget.initialAddress?.fullLine ?? '',
+    );
+  }
 
   @override
   void dispose() {
@@ -46,8 +57,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _commentCtrl.dispose();
     super.dispose();
   }
-
-  /* ───────────────── helpers ───────────────── */
 
   void _startCooldown() {
     _secondsLeft = 60;
@@ -68,35 +77,72 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<String?> _askCode() async {
     String? code;
-    await showDialog(
+    await showModalBottomSheet<String?>(
       context: context,
-      barrierDismissible: false,
+      isDismissible: false,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        final ctrl = TextEditingController();
-        return AlertDialog(
-          title: const Text('Введите код из SMS'),
-          content: TextField(
-            controller: ctrl,
-            maxLength: 4,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(counterText: ''),
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Отмена'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (ctrl.text.length == 4) {
-                  code = ctrl.text;
-                  Navigator.pop(ctx);
-                }
-              },
-              child: const Text('ОК'),
-            ),
-          ],
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Введите код из SMS',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              PinCodeTextField(
+                appContext: context,
+                length: 4,
+                autoFocus: true,
+                animationType: AnimationType.fade,
+                keyboardType: TextInputType.number,
+                cursorColor: Theme.of(context).primaryColor,
+                pinTheme: PinTheme(
+                  shape: PinCodeFieldShape.box,
+                  fieldHeight: 60,
+                  fieldWidth: 50,
+                  borderRadius: BorderRadius.circular(8),
+                  activeColor: Theme.of(context).primaryColor,
+                  selectedColor: Theme.of(context).primaryColor,
+                  inactiveColor: Colors.grey.shade300,
+                  activeFillColor: Colors.white,
+                  selectedFillColor: Colors.white,
+                  inactiveFillColor: Colors.white,
+                ),
+                animationDuration: const Duration(milliseconds: 200),
+                enableActiveFill: true,
+                onCompleted: (value) {
+                  code = value;
+                  Navigator.of(ctx).pop(value);
+                },
+                onChanged: (_) {},
+                beforeTextPaste: (_) => false,
+              ),
+              const SizedBox(height: 12),
+              if (_secondsLeft > 0)
+                Text(
+                  'Код можно отправить повторно через $_secondsLeft с',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                )
+              else if (_lastSend != null)
+                TextButton(
+                  onPressed: () {
+                    final phone = '+${_phoneMask.getUnmaskedText()}';
+                    _sendCode(phone);
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text('Отправить ещё раз'),
+                ),
+            ],
+          ),
         );
       },
     );
@@ -106,33 +152,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void _showError(String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
-  /* ───────────────── FLOW ───────────────── */
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _loading = true);
 
-    // 0️⃣ проверяем сохранённый токен
     String? jwt = await _auth.token;
-
     final phone = '+${_phoneMask.getUnmaskedText()}';
     if (jwt == null) {
-      // 1️⃣ отправляем код
       if (!await _sendCode(phone)) {
         _showError('Не удалось отправить код');
         setState(() => _loading = false);
         return;
       }
-
-      // 2️⃣ диалог ввода кода
       final code = await _askCode();
       if (code == null) {
         setState(() => _loading = false);
         return;
       }
-
-      // 3️⃣ подтверждаем
       jwt = await _auth.confirmCode(phone, code);
       if (jwt == null) {
         _showError('Неверный или истёкший код');
@@ -141,7 +177,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
     }
 
-    // 4️⃣ создаём заказ
     final orderId = await _order.createOrder(
       jwt: jwt,
       phone: phone,
@@ -152,7 +187,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       total: widget.total,
     );
 
-    // 5️⃣ очищаем корзину
     await Hive.box<CartItem>('cartBox').clear();
 
     if (!mounted) return;
@@ -162,8 +196,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       MaterialPageRoute(builder: (_) => _SuccessPage(orderId: orderId)),
     );
   }
-
-  /* ───────────────── UI ───────────────── */
 
   @override
   Widget build(BuildContext context) {
@@ -203,14 +235,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                ),
-              if (_secondsLeft == 0 && _lastSend != null)
-                TextButton(
-                  onPressed:
-                      () => _sendCode(
-                        '+${_phoneMask.getUnmaskedText()}',
-                      ), // повторный send
-                  child: const Text('Отправить ещё раз'),
                 ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -261,8 +285,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 }
-
-/* ───────────────── success page ───────────────── */
 
 class _SuccessPage extends StatelessWidget {
   final String orderId;
